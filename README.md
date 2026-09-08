@@ -109,7 +109,7 @@ npm run usage -- go                        # 等价写法
     "week": { "requests": 1558, "..." : "..." },
     "allTime": { "requests": 26991, "..." : "..." },
     "byDay": [{ "date": "2026-09-07", "requests": 268, "tokens": {...}, "cost": 1.44 }],
-    "byModel": [{ "id": "claude-sonnet-4-20250514", "requests": 12000, "tokens": {...}, "cost": 100.00, "lastUsedAt": "2026-09-07T12:00:00Z" }]
+    "byModel": [{ "id": "deepseek-v4-flash", "requests": 15938, "tokens": {...}, "cost": 33.76, "lastUsedAt": "2026-09-07T12:00:00Z" }]
   },
   "quota": {
     "available": true,
