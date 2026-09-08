@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self';"
+    />
+    <title>OpenCode 用量</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="card" id="card">
+      <header class="card__header" id="header">
+        <div class="brand">
+          <span class="brand__dot" aria-hidden="true"></span>
+          <span class="brand__title">OpenCode</span>
+          <span class="brand__sub">用量</span>
+        </div>
+        <span class="tabs">
+          <button class="tab on" id="tab-fee" data-pane="fee">费用</button>
+          <button class="tab" id="tab-go" data-pane="go">Go</button>
+        </span>
+        <div class="actions">
+          <button
+            class="iconbtn"
+            id="btn-refresh"
+            type="button"
+            title="刷新"
+            aria-label="刷新"
+          >
+            <svg viewBox="0 0 16 16" aria-hidden="true">
+              <path
+                d="M8 2.5a5.5 5.5 0 0 1 4.85 2.92l-1.18.55A4.2 4.2 0 0 0 8 3.8a4.2 4.2 0 1 0 3.99 5.55h1.3A5.5 5.5 0 1 1 8 2.5Zm.65-1.85v3.4H5.25l1.2-1.2A5.48 5.48 0 0 1 8.65.65Z"
+              />
+            </svg>
+          </button>
+          <button
+            class="iconbtn iconbtn--danger"
+            id="btn-close"
+            type="button"
+            title="关闭"
+            aria-label="关闭"
+          >
+            <svg viewBox="0 0 16 16" aria-hidden="true">
+              <path
+                d="M3.72 3.72a.75.75 0 0 1 1.06 0L8 6.94l3.22-3.22a.75.75 0 1 1 1.06 1.06L9.06 8l3.22 3.22a.75.75 0 1 1-1.06 1.06L8 9.06l-3.22 3.22a.75.75 0 0 1-1.06-1.06L6.94 8 3.72 4.78a.75.75 0 0 1 0-1.06Z"
+              />
+            </svg>
+          </button>
+        </div>
+      </header>
+
+      <div class="banner banner--hidden" id="banner" role="status">
+        <span class="banner__dot" aria-hidden="true"></span>
+        <span class="banner__text" id="banner-text">数据库不可用，等待中…</span>
+      </div>
+
+      <div class="pane pane--fee" id="pane-fee">
+      <section class="hero" aria-label="今日用量">
+        <div class="hero__row">
+          <span class="hero__label">今日</span>
+          <span class="hero__hint" id="hero-updated">—</span>
+        </div>
+        <div class="hero__cost">
+          <span class="hero__currency">$</span>
+          <span class="hero__amount" id="hero-cost">—</span>
+        </div>
+        <div class="hero__sub">
+          <span class="chip"
+            ><span class="chip__k">输入</span
+            ><span class="chip__v" id="hero-in">—</span></span
+          >
+          <span class="chip chip--alt"
+            ><span class="chip__k">输出</span
+            ><span class="chip__v" id="hero-out">—</span></span
+          >
+          <span class="chip chip--ghost"
+            ><span class="chip__k">会话</span
+            ><span class="chip__v" id="hero-sessions">—</span></span
+          >
+        </div>
+      </section>
+
+      <section class="rows" aria-label="本周与累计">
+        <div class="row">
+          <span class="row__label">本周</span>
+          <span class="row__cost" id="week-cost">—</span>
+          <span class="row__meta" id="week-meta">—</span>
+        </div>
+        <div class="row row--strong">
+          <span class="row__label">累计</span>
+          <span class="row__cost" id="all-cost">—</span>
+          <span class="row__meta" id="all-meta">—</span>
+        </div>
+      </section>
+
+      <section class="chart" aria-label="近 7 日费用">
+        <div class="chart__head">
+          <span class="chart__title">近 7 日</span>
+          <span class="chart__hint" id="chart-hint">—</span>
+        </div>
+        <div class="chart__body" id="chart-body">
+          <!-- bars injected by renderer.js -->
+        </div>
+      </section>
+
+      <section class="lists" aria-label="模型与项目">
+        <div class="list">
+          <div class="list__head">
+            <span class="list__title">模型</span>
+            <span class="list__hint">Top 3</span>
+          </div>
+          <ol class="list__items" id="list-models"></ol>
+        </div>
+        <div class="list">
+          <div class="list__head">
+            <span class="list__title">项目</span>
+            <span class="list__hint">Top 3</span>
+          </div>
+          <ol class="list__items" id="list-projects"></ol>
+        </div>
+      </section>
+      </div><!-- .pane--fee -->
+
+      <div class="pane pane--go" id="pane-go" hidden>
+        <section class="hero" aria-label="今日请求">
+          <div class="hero__row">
+            <span class="hero__label">今日请求</span>
+            <span class="hero__hint" id="go-hero-updated">—</span>
+          </div>
+          <div class="hero__cost">
+            <span class="hero__amount" id="go-hero-cost">—</span>
+            <span class="hero__unit">次</span>
+          </div>
+          <div class="hero__sub" id="go-hero-sub">— tok · $— · —</div>
+        </section>
+
+        <section class="go-quota" aria-label="套餐额度">
+          <div class="go-quota__head">
+            <span>套餐额度</span>
+            <span class="go-quota__src" id="go-quota-src">server</span>
+          </div>
+          <div class="go-qrow" id="go-quota-rolling">
+            <span class="go-qrow__n">5小时</span>
+            <span class="go-qrow__bar"><span class="go-qrow__fill"></span></span>
+            <span class="go-qrow__v">—</span>
+            <span class="go-qrow__r">—</span>
+          </div>
+          <div class="go-qrow" id="go-quota-weekly">
+            <span class="go-qrow__n">本周</span>
+            <span class="go-qrow__bar"><span class="go-qrow__fill"></span></span>
+            <span class="go-qrow__v">—</span>
+            <span class="go-qrow__r">—</span>
+          </div>
+          <div class="go-qrow" id="go-quota-monthly">
+            <span class="go-qrow__n">本月</span>
+            <span class="go-qrow__bar"><span class="go-qrow__fill"></span></span>
+            <span class="go-qrow__v">—</span>
+            <span class="go-qrow__r">—</span>
+          </div>
+        </section>
+
+        <section class="go-hits" aria-label="缓存命中率">
+          <div class="go-hit" id="go-hit-today">
+            <span class="go-hit__n">缓存命中·今日</span>
+            <span class="go-hit__bar"><span class="go-hit__fill"></span></span>
+            <span class="go-hit__v">—</span>
+          </div>
+          <div class="go-hit" id="go-hit-alltime">
+            <span class="go-hit__n">缓存命中·累计</span>
+            <span class="go-hit__bar"><span class="go-hit__fill"></span></span>
+            <span class="go-hit__v">—</span>
+          </div>
+        </section>
+
+        <section class="go-rows" aria-label="本周与累计">
+          <div class="go-row" id="go-row-week">
+            <span class="go-row__lbl">本周</span>
+            <span class="go-row__req">—</span>
+            <span class="go-row__meta">— tok · $—</span>
+          </div>
+          <div class="go-row go-row--strong" id="go-row-all">
+            <span class="go-row__lbl">累计</span>
+            <span class="go-row__req">—</span>
+            <span class="go-row__meta">— tok · $—</span>
+          </div>
+        </section>
+
+        <section class="go-lists" aria-label="模型">
+          <div class="go-list">
+            <div class="go-list__head">
+              <span>模型 TOP 3 · 共 <span id="go-model-count">0</span></span>
+              <span>请求 / 费用标记</span>
+            </div>
+            <ol class="go-list__items" id="go-list-models"></ol>
+          </div>
+        </section>
+
+        <div class="go-foot" id="go-foot">
+          <span id="go-foot-hitrate">读写占比 —</span>
+          <span>完整明细 → usage go</span>
+        </div>
+      </div><!-- .pane--go -->
+    </main>
+
+    <script src="renderer.js"></script>
+  </body>
+</html>

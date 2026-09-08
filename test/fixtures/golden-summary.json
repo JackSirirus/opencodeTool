@@ -1,0 +1,229 @@
+{
+  "available": true,
+  "generatedAt": "2026-01-01T00:00:00.000Z",
+  "today": {
+    "cost": 1,
+    "tokensInput": 1,
+    "tokensOutput": 1,
+    "tokensReasoning": 1,
+    "tokensCacheRead": 1,
+    "tokensCacheWrite": 1,
+    "sessions": 1,
+    "topModel": {
+      "id": "example",
+      "providerID": "example",
+      "cost": 1
+    }
+  },
+  "week": {
+    "cost": 1,
+    "tokensInput": 1,
+    "tokensOutput": 1,
+    "tokensReasoning": 1,
+    "tokensCacheRead": 1,
+    "tokensCacheWrite": 1,
+    "sessions": 1,
+    "topModel": {
+      "id": "example",
+      "providerID": "example",
+      "cost": 1
+    }
+  },
+  "allTime": {
+    "cost": 1,
+    "tokensInput": 1,
+    "tokensOutput": 1,
+    "tokensReasoning": 1,
+    "tokensCacheRead": 1,
+    "tokensCacheWrite": 1,
+    "sessions": 1,
+    "topModel": {
+      "id": "example",
+      "providerID": "example",
+      "cost": 1
+    }
+  },
+  "byDay": [
+    {
+      "date": "2026-01-01",
+      "cost": 1,
+      "tokensInput": 1,
+      "tokensOutput": 1,
+      "sessions": 1
+    },
+    {
+      "date": "2026-01-01",
+      "cost": 1,
+      "tokensInput": 1,
+      "tokensOutput": 1,
+      "sessions": 1
+    },
+    {
+      "date": "2026-01-01",
+      "cost": 1,
+      "tokensInput": 1,
+      "tokensOutput": 1,
+      "sessions": 1
+    },
+    {
+      "date": "2026-01-01",
+      "cost": 1,
+      "tokensInput": 1,
+      "tokensOutput": 1,
+      "sessions": 1
+    },
+    {
+      "date": "2026-01-01",
+      "cost": 1,
+      "tokensInput": 1,
+      "tokensOutput": 1,
+      "sessions": 1
+    },
+    {
+      "date": "2026-01-01",
+      "cost": 1,
+      "tokensInput": 1,
+      "tokensOutput": 1,
+      "sessions": 1
+    },
+    {
+      "date": "2026-01-01",
+      "cost": 1,
+      "tokensInput": 1,
+      "tokensOutput": 1,
+      "sessions": 1
+    }
+  ],
+  "byModel": [
+    {
+      "id": "example",
+      "providerID": "example",
+      "cost": 1,
+      "tokensInput": 1,
+      "tokensOutput": 1,
+      "sessions": 1
+    },
+    {
+      "id": "example",
+      "providerID": "example",
+      "cost": 1,
+      "tokensInput": 1,
+      "tokensOutput": 1,
+      "sessions": 1
+    },
+    {
+      "id": "example",
+      "providerID": "example",
+      "cost": 1,
+      "tokensInput": 1,
+      "tokensOutput": 1,
+      "sessions": 1
+    },
+    {
+      "id": "example",
+      "providerID": "example",
+      "cost": 1,
+      "tokensInput": 1,
+      "tokensOutput": 1,
+      "sessions": 1
+    },
+    {
+      "id": "example",
+      "providerID": "example",
+      "cost": 1,
+      "tokensInput": 1,
+      "tokensOutput": 1,
+      "sessions": 1
+    },
+    {
+      "id": "example",
+      "providerID": "example",
+      "cost": 1,
+      "tokensInput": 1,
+      "tokensOutput": 1,
+      "sessions": 1
+    },
+    {
+      "id": "example",
+      "providerID": "example",
+      "cost": 1,
+      "tokensInput": 1,
+      "tokensOutput": 1,
+      "sessions": 1
+    },
+    {
+      "id": "example",
+      "providerID": "example",
+      "cost": 1,
+      "tokensInput": 1,
+      "tokensOutput": 1,
+      "sessions": 1
+    },
+    {
+      "id": "example",
+      "providerID": "example",
+      "cost": 1,
+      "tokensInput": 1,
+      "tokensOutput": 1,
+      "sessions": 1
+    },
+    {
+      "id": "example",
+      "providerID": "example",
+      "cost": 1,
+      "tokensInput": 1,
+      "tokensOutput": 1,
+      "sessions": 1
+    }
+  ],
+  "byProject": [
+    {
+      "name": "example",
+      "worktree": "D:/path/to/project",
+      "cost": 1,
+      "tokensInput": 1,
+      "tokensOutput": 1,
+      "sessions": 1
+    },
+    {
+      "name": "example",
+      "worktree": "D:/path/to/project",
+      "cost": 1,
+      "tokensInput": 1,
+      "tokensOutput": 1,
+      "sessions": 1
+    },
+    {
+      "name": "example",
+      "worktree": "D:/path/to/project",
+      "cost": 1,
+      "tokensInput": 1,
+      "tokensOutput": 1,
+      "sessions": 1
+    },
+    {
+      "name": "example",
+      "worktree": "D:/path/to/project",
+      "cost": 1,
+      "tokensInput": 1,
+      "tokensOutput": 1,
+      "sessions": 1
+    },
+    {
+      "name": "example",
+      "worktree": "D:/path/to/project",
+      "cost": 1,
+      "tokensInput": 1,
+      "tokensOutput": 1,
+      "sessions": 1
+    },
+    {
+      "name": "example",
+      "worktree": "D:/path/to/project",
+      "cost": 1,
+      "tokensInput": 1,
+      "tokensOutput": 1,
+      "sessions": 1
+    }
+  ]
+}

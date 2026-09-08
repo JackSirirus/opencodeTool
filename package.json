@@ -1,0 +1,16 @@
+{
+  "name": "opencode-display-tools",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "OpenCode display tools: usage CLI + desktop usage widget (reads local opencode SQLite DB)",
+  "scripts": {
+    "usage": "node bin/opencode-usage.js",
+    "widget": "electron src/widget/main.js",
+    "start": "npm run widget",
+    "test": "node --test \"test/*.test.js\""
+  },
+  "devDependencies": {
+    "electron": "^44.2.0"
+  }
+}

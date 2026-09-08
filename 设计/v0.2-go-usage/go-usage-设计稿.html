@@ -1,0 +1,383 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>opencodeTool · Go 套餐视图 设计稿 v2-draft</title>
+<style>
+  /* ===== design tokens: 与 src/widget/styles.css 完全一致 ===== */
+  :root {
+    --bg-0: #0a0d12; --bg-1: #0f141b; --bg-2: #161d27; --bg-3: #1d2532;
+    --border: rgba(255,255,255,0.08); --border-strong: rgba(255,255,255,0.16); --border-soft: rgba(255,255,255,0.04);
+    --fg: rgba(255,255,255,0.94); --fg-2: rgba(255,255,255,0.62); --fg-3: rgba(255,255,255,0.38); --fg-4: rgba(255,255,255,0.22);
+    --amber: #f5b942; --amber-soft: rgba(245,185,66,0.18); --amber-glow: rgba(245,185,66,0.35);
+    --coral: #ff8a3d; --cyan: #7ed3ff; --cyan-soft: rgba(126,211,255,0.16);
+    --violet: #c4b5fd; --violet-soft: rgba(196,181,253,0.16);
+    --danger: #ff6b6b; --warn: #fbbf24;
+    --mono: "Cascadia Mono","JetBrains Mono","Consolas",ui-monospace,monospace;
+    --ui: "Segoe UI Variable","Segoe UI","PingFang SC","Microsoft YaHei UI",system-ui,sans-serif;
+    --r-sm: 6px; --r-md: 10px; --r-lg: 14px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 40px 24px 80px; background: #07090d;
+    background-image: radial-gradient(1200px 600px at 70% -10%, rgba(245,185,66,0.05), transparent),
+                      radial-gradient(900px 500px at 10% 110%, rgba(126,211,255,0.04), transparent);
+    color: var(--fg); font-family: var(--ui); font-size: 13px; line-height: 1.5;
+  }
+  .page { max-width: 1060px; margin: 0 auto; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  h1 code { font-family: var(--mono); color: var(--amber); font-size: 18px; }
+  .meta { color: var(--fg-3); font-size: 12px; margin-bottom: 28px; }
+  .meta b { color: var(--fg-2); font-weight: 600; }
+  h2 { font-size: 14px; color: var(--fg-2); margin: 40px 0 12px; font-weight: 600;
+       border-top: 1px solid var(--border-soft); padding-top: 24px; }
+  h2:first-of-type { border-top: none; padding-top: 0; margin-top: 0; }
+
+  .row { display: flex; gap: 48px; align-items: flex-start; flex-wrap: wrap; }
+  .annot { flex: 1; min-width: 380px; max-width: 620px; color: var(--fg-2); font-size: 13px; }
+  .annot ul { margin: 8px 0; padding-left: 18px; }
+  .annot li { margin: 6px 0; }
+  .annot .k { color: var(--amber); font-family: var(--mono); font-size: 12px; }
+  .tag { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 99px;
+         background: var(--amber-soft); color: var(--amber); margin-right: 6px; vertical-align: 1px; }
+  .tag.c { background: var(--cyan-soft); color: var(--cyan); }
+  .tag.v { background: var(--violet-soft); color: var(--violet); }
+
+  /* ================= 小窗口 mockup（1:1 还原 300x400） ================= */
+  .stage { display: flex; gap: 36px; flex-wrap: wrap; }
+  .win-wrap { text-align: center; }
+  .win-label { color: var(--fg-3); font-size: 12px; margin-bottom: 10px; font-family: var(--mono); }
+
+  .widget { width: 300px; height: 400px; padding: 4px; text-align: left; position: relative; }
+  .widget .card {
+    position: relative; width: 100%; height: 100%; display: flex; flex-direction: column;
+    border-radius: var(--r-lg); border: 1px solid var(--border);
+    background:
+      radial-gradient(140% 90% at 100% 0%, rgba(245,185,66,0.07), transparent 55%),
+      linear-gradient(160deg, var(--bg-2), var(--bg-1) 60%, var(--bg-0));
+    box-shadow: 0 18px 40px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.06);
+    overflow: hidden;
+  }
+  /* header + tabs */
+  .hdr { display: flex; align-items: center; gap: 6px; padding: 10px 10px 6px; }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--amber); box-shadow: 0 0 8px var(--amber-glow); }
+  .brand { font-size: 11px; color: var(--fg-2); font-weight: 600; letter-spacing: 0.2px; }
+  .tabs { display: flex; margin-left: 6px; background: var(--bg-0); border: 1px solid var(--border-soft);
+          border-radius: 99px; padding: 2px; }
+  .tab { font-size: 10px; padding: 2px 10px; border-radius: 99px; color: var(--fg-3); cursor: pointer;
+         border: none; background: transparent; font-family: var(--ui); }
+  .tab.on { background: var(--amber-soft); color: var(--amber); font-weight: 600; }
+  .iconbtn { margin-left: auto; display: flex; gap: 4px; }
+  .ib { width: 20px; height: 20px; border-radius: var(--r-sm); border: 1px solid var(--border-soft);
+        background: transparent; color: var(--fg-3); display: grid; place-items: center; cursor: pointer; }
+  .ib:hover { color: var(--fg-2); border-color: var(--border-strong); }
+  .ib svg { width: 11px; height: 11px; fill: currentColor; }
+
+  .pane { flex: 1; display: flex; flex-direction: column; padding: 2px 10px 8px; min-height: 0; }
+
+  /* hero */
+  .hero { padding: 4px 0 8px; }
+  .hero .lbl { font-size: 10px; color: var(--fg-3); letter-spacing: 0.6px; }
+  .hero .big { font-family: var(--mono); font-size: 28px; font-weight: 600; color: var(--amber);
+               text-shadow: 0 0 24px var(--amber-glow); line-height: 1.15; }
+  .hero .big small { font-size: 13px; color: var(--fg-3); font-weight: 400; margin-left: 4px; }
+  .hero .sub { font-size: 11px; color: var(--fg-3); font-family: var(--mono); }
+  .hero .sub b { color: var(--fg-2); font-weight: 600; }
+
+  /* 额度区（服务端数据，violet） */
+  .quota { padding: 8px 0 10px; border-top: 1px solid var(--border-soft); }
+  .qhead { display: flex; justify-content: space-between; font-size: 10px; color: var(--fg-3);
+           letter-spacing: 0.5px; margin-bottom: 6px; }
+  .qhead .src { color: var(--violet); font-family: var(--mono); font-size: 9px; }
+  .qrow { display: grid; grid-template-columns: 40px 1fr 36px 62px; align-items: center; gap: 7px; margin-bottom: 5px; }
+  .qrow:last-child { margin-bottom: 0; }
+  .qrow .n { font-size: 10px; color: var(--fg-2); }
+  .qrow .bar { height: 4px; border-radius: 99px; background: rgba(255,255,255,0.06); overflow: hidden; }
+  .qrow .bar i { display: block; height: 100%; border-radius: 99px; background: linear-gradient(90deg, var(--violet), #9f8cfa); }
+  .qrow.warn .bar i { background: linear-gradient(90deg, var(--warn), var(--coral)); }
+  .qrow.hit .bar i { background: linear-gradient(90deg, var(--danger), #e04848); }
+  .qrow .v { font-size: 10.5px; font-family: var(--mono); color: var(--violet); text-align: right; }
+  .qrow.warn .v { color: var(--warn); }
+  .qrow.hit .v { color: var(--danger); }
+  .qrow .r { font-size: 9px; color: var(--fg-4); font-family: var(--mono); text-align: right; white-space: nowrap; }
+
+  /* 命中率条 */
+  .hits { display: flex; flex-direction: column; gap: 6px; padding: 8px 0 10px;
+          border-top: 1px solid var(--border-soft); }
+  .hit { display: grid; grid-template-columns: 92px 1fr 52px; align-items: center; gap: 8px; }
+  .hit .n { font-size: 10px; color: var(--fg-3); }
+  .hit .bar { height: 4px; border-radius: 99px; background: rgba(255,255,255,0.06); overflow: hidden; }
+  .hit .bar i { display: block; height: 100%; border-radius: 99px; }
+  .hit .v { font-size: 11px; font-family: var(--mono); text-align: right; }
+  .hit.a .bar i { background: linear-gradient(90deg, var(--amber), var(--coral)); }
+  .hit.a .v { color: var(--amber); }
+  .hit.c .bar i { background: linear-gradient(90deg, var(--cyan), #4aa8d8); }
+  .hit.c .v { color: var(--cyan); }
+
+  /* rows */
+  .rows { display: flex; flex-direction: column; gap: 2px; padding-bottom: 8px; border-top: 1px solid var(--border-soft); }
+  .rowi { display: flex; align-items: baseline; gap: 8px; padding: 4px 0; }
+  .rowi .lbl { font-size: 11px; color: var(--fg-3); width: 30px; }
+  .rowi .req { font-family: var(--mono); font-size: 13px; font-weight: 600; color: var(--fg); }
+  .rowi .req small { font-size: 10px; color: var(--fg-4); font-weight: 400; margin-left: 2px; }
+  .rowi .meta { margin-left: auto; font-size: 10px; color: var(--fg-3); font-family: var(--mono); }
+  .rowi.strong { border-top: 1px dashed var(--border-soft); }
+
+  /* lists */
+  .lists { display: flex; flex-direction: column; gap: 4px; flex: 1; min-height: 0; border-top: 1px solid var(--border-soft); padding-top: 7px; }
+  .lhead { display: flex; justify-content: space-between; font-size: 10px; color: var(--fg-3); letter-spacing: 0.5px; }
+  .lhead .h { color: var(--fg-4); font-family: var(--mono); }
+  ol.mlist { list-style: none; margin: 4px 0 0; padding: 0; display: flex; flex-direction: column; gap: 3px; }
+  ol.mlist li { display: flex; align-items: center; gap: 7px; font-size: 11px; padding: 2px 6px;
+                border-radius: var(--r-sm); background: rgba(255,255,255,0.025); border: 1px solid var(--border-soft); }
+  ol.mlist .idx { font-family: var(--mono); font-size: 9px; color: var(--fg-4); }
+  ol.mlist .nm { color: var(--fg-2); font-family: var(--mono); font-size: 10px; overflow: hidden;
+                 text-overflow: ellipsis; white-space: nowrap; }
+  ol.mlist .rq { margin-left: auto; font-family: var(--mono); font-size: 10px; color: var(--cyan); }
+  ol.mlist .co { font-family: var(--mono); font-size: 10px; color: var(--amber); width: 48px; text-align: right; }
+  .foot { margin-top: auto; padding-top: 5px; font-size: 9.5px; color: var(--fg-4); font-family: var(--mono);
+          display: flex; justify-content: space-between; }
+
+  /* ================= CLI 模拟终端 ================= */
+  .term {
+    background: #0b0e13; border: 1px solid var(--border); border-radius: var(--r-md);
+    font-family: var(--mono); font-size: 12px; line-height: 1.62; color: var(--fg-2);
+    padding: 16px 20px; overflow-x: auto; white-space: pre;
+  }
+  .term .t { color: var(--fg-4); }
+  .term .h { color: var(--fg); font-weight: 700; }
+  .term .a { color: var(--amber); }
+  .term .c { color: var(--cyan); }
+  .term .v { color: var(--violet); }
+  .term .d { color: var(--fg-3); }
+  .term .bar1 { color: var(--violet); }
+  .term .bar2 { color: rgba(196,181,253,0.5); }
+  .term .bar3 { color: rgba(196,181,253,0.28); }
+  .term .abar1 { color: var(--amber); }
+  .term .abar2 { color: rgba(245,185,66,0.5); }
+</style>
+</head>
+<body>
+<div class="page">
+  <h1>OpenCode Go 套餐视图 · 设计稿 <code>v2-draft</code></h1>
+  <div class="meta">
+    方案 A（小窗口双 Tab + CLI 分区表）· 视觉沿用暗色玻璃 tokens ·
+    数据快照 <b>2026-09-07</b>（本地统计来自 opencode.db；额度来自官方 API <b>/zen/go/v1/usage</b> 实测 200）·
+    v2 变更：<b>新增服务端额度区</b>（5h/周/月三条），窗口 360→400
+  </div>
+
+  <!-- ============ 1. 小窗口 ============ -->
+  <h2>① 桌面小窗口 — Go Tab（点击 Tab 可切换预览）</h2>
+  <div class="stage">
+    <div class="win-wrap">
+      <div class="win-label">300 × 400 · Go tab 激活（新）</div>
+      <div class="widget" id="w-go">
+        <div class="card">
+          <div class="hdr">
+            <span class="dot"></span>
+            <span class="brand">OpenCode</span>
+            <span class="tabs">
+              <button class="tab" data-p="fee">费用</button>
+              <button class="tab on" data-p="go">Go</button>
+            </span>
+            <span class="iconbtn">
+              <span class="ib" title="刷新"><svg viewBox="0 0 16 16"><path d="M8 2.5a5.5 5.5 0 0 1 4.85 2.92l-1.18.55A4.2 4.2 0 0 0 8 3.8a4.2 4.2 0 1 0 3.99 5.55h1.3A5.5 5.5 0 1 1 8 2.5Z"/></svg></span>
+              <span class="ib" title="关闭"><svg viewBox="0 0 16 16"><path d="M3.72 3.72a.75.75 0 0 1 1.06 0L8 6.94l3.22-3.22a.75.75 0 1 1 1.06 1.06L9.06 8l3.22 3.22a.75.75 0 1 1-1.06 1.06L8 9.06l-3.22 3.22a.75.75 0 0 1-1.06-1.06L6.94 8 3.72 4.78a.75.75 0 0 1 0-1.06Z"/></svg></span>
+            </span>
+          </div>
+
+          <!-- GO PANE -->
+          <div class="pane" data-pane="go">
+            <div class="hero">
+              <div class="lbl">今日请求</div>
+              <div class="big">268<small>次</small></div>
+              <div class="sub"><b>24.1M</b> tok · <b>$1.44</b> · 09-07 16:4x</div>
+            </div>
+
+            <div class="quota">
+              <div class="qhead"><span>套餐额度</span><span class="src">server · 5h $12 / 周 $30 / 月 $60</span></div>
+              <div class="qrow">
+                <span class="n">5小时</span>
+                <span class="bar"><i style="width:7%"></i></span>
+                <span class="v">7%</span>
+                <span class="r">2h11m 后重置</span>
+              </div>
+              <div class="qrow">
+                <span class="n">本周</span>
+                <span class="bar"><i style="width:2%"></i></span>
+                <span class="v">2%</span>
+                <span class="r">09-14 重置</span>
+              </div>
+              <div class="qrow warn">
+                <span class="n">本月</span>
+                <span class="bar"><i style="width:42%"></i></span>
+                <span class="v">42%</span>
+                <span class="r">10-01 重置</span>
+              </div>
+            </div>
+
+            <div class="hits">
+              <div class="hit a">
+                <span class="n">缓存命中·今日</span>
+                <span class="bar"><i style="width:86.9%"></i></span>
+                <span class="v">86.9%</span>
+              </div>
+              <div class="hit c">
+                <span class="n">缓存命中·累计</span>
+                <span class="bar"><i style="width:97.4%"></i></span>
+                <span class="v">97.4%</span>
+              </div>
+            </div>
+
+            <div class="rows">
+              <div class="rowi">
+                <span class="lbl">本周</span>
+                <span class="req">1,558<small>次</small></span>
+                <span class="meta">331.3M tok · $13.25</span>
+              </div>
+              <div class="rowi strong">
+                <span class="lbl">累计</span>
+                <span class="req">26,991<small>次</small></span>
+                <span class="meta">6.41B tok · $168.99</span>
+              </div>
+            </div>
+
+            <div class="lists">
+              <div class="lhead"><span>模型 TOP 3 · 共 12</span><span class="h">请求 / 费用标记</span></div>
+              <ol class="mlist">
+                <li><span class="idx">01</span><span class="nm">deepseek-v4-flash</span><span class="rq">15,938</span><span class="co">$33.76</span></li>
+                <li><span class="idx">02</span><span class="nm">deepseek-v4-pro</span><span class="rq">8,253</span><span class="co">$92.52</span></li>
+                <li><span class="idx">03</span><span class="nm">minimax-m3</span><span class="rq">1,057</span><span class="co">$8.82</span></li>
+              </ol>
+            </div>
+
+            <div class="foot"><span>读写占比口径 99.96%</span><span>完整明细 → usage go</span></div>
+          </div>
+
+          <!-- FEE PANE（现状参考，简化复刻） -->
+          <div class="pane" data-pane="fee" style="display:none">
+            <div class="hero">
+              <div class="lbl">今日 · 16:4x</div>
+              <div class="big"><span style="font-size:16px;color:var(--fg-3)">$</span>2.31</div>
+              <div class="sub">输入 <b>18.2M</b> · 输出 <b>1.1M</b> · 会话 <b>12</b></div>
+            </div>
+            <div class="rows" style="border-top:none">
+              <div class="rowi"><span class="lbl">本周</span><span class="req" style="font-family:var(--ui)">$18.42</span><span class="meta">924M in · 41 会话</span></div>
+              <div class="rowi strong"><span class="lbl">累计</span><span class="req" style="font-family:var(--ui)">$169.0</span><span class="meta">6.6B in · 619 会话</span></div>
+            </div>
+            <div class="lists">
+              <div class="lhead"><span>模型 TOP 3</span><span class="h">费用</span></div>
+              <ol class="mlist">
+                <li><span class="idx">01</span><span class="nm">deepseek-v4-pro</span><span class="co" style="width:auto;margin-left:auto">$92.52</span></li>
+                <li><span class="idx">02</span><span class="nm">deepseek-v4-flash</span><span class="co" style="width:auto;margin-left:auto">$33.76</span></li>
+                <li><span class="idx">03</span><span class="nm">glm-5.1</span><span class="co" style="width:auto;margin-left:auto">$22.26</span></li>
+              </ol>
+            </div>
+            <div class="foot"><span>近 7 日柱状图保留</span><span>原视图不变</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="annot">
+      <span class="tag">信息结构</span><span class="tag c">真实数据</span><span class="tag v">服务端额度</span>
+      <ul>
+        <li><b>Tab 切换</b>：header pill tab（费用 | Go），Go 激活琥珀高亮；两视图互斥渲染。</li>
+        <li><b>hero = 今日请求次数</b>：套餐按美元额度计，请求量比费用更贴近套餐心智；费用标记降为小字。</li>
+        <li><b>额度区（violet，服务端数据）</b>：三条 = 5 小时 / 本周 / 本月。API <span class="k">GET /zen/go/v1/usage</span> 返回 {status, percent, resetsAt}——percent 是权威值（限额按美元计价且因模型乘数而异，本地无法复算）。右侧显示重置时间：5h 窗口显示倒计时（"2h11m 后重置"），周/月显示重置日期。</li>
+        <li><b>额度色阶</b>：&lt;50% violet 正常 / 50–80% warn 琥珀 / &gt;80% danger 红 / <span class="k">status=rate-limited</span> 恒 100% 红且提示"已达上限，可切换免费模型"。</li>
+        <li><b>命中率双条</b>：今日 + 累计，"占输入"口径；读写占比口径无区分度（write≈0），只在 CLI 与 footer 展示。</li>
+        <li><b>颜色语义分层</b>：amber=本地用量 · cyan=命中率 · violet=服务端额度——一眼区分数据来源。</li>
+        <li><b>额度轮询独立</b>：API 建议 ≥5min 间隔（每次查询是服务端三表 join）；本地统计仍 30s。两个数据源异步刷新、独立降级。</li>
+        <li><b>高度预算</b>：360→400 吸收额度区（+64px）；hdr 36 + hero 70 + quota 74 + hits 60 + rows 58 + lists 88 + foot 16 ≈ 402/400，lists flex 吸收余量。</li>
+        <li><b>API 失败降级</b>：额度区显示"额度数据不可用"（弱化文案），本地统计区不受影响。</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ============ 2. CLI ============ -->
+  <h2>② CLI — <code style="font-family:var(--mono);color:var(--amber)">usage go</code> 子命令（分区表）</h2>
+  <div class="row">
+    <div class="term" style="flex:1;min-width:560px"><span class="t">$ npm run usage -- go</span>
+
+  <span class="h">OpenCode Go 套餐</span>                          <span class="t">2026-09-07 16:4x</span>
+  <span class="d">──────────────────────────────────────────────────</span>
+  今日       <span class="a">268</span> 请求     <span class="a">24.1M</span> tok     <span class="a">$1.44</span>
+  本周     <span class="a">1,558</span> 请求    <span class="a">331.3M</span> tok    <span class="a">$13.25</span>
+  累计    <span class="a">26,991</span> 请求      <span class="a">6.41B</span> tok   <span class="a">$168.99</span>
+
+  <span class="v">套餐额度</span>  <span class="t">(server · opencode.ai/zen/go/v1/usage)</span>
+  <span class="d">──────────────────────────────────────────────────</span>
+  5 小时   <span class="bar1">▇░░░░░░░░░</span>  <span class="v">7%</span>  <span class="d">限额 $12 · 2h11m 后重置</span>
+  本周     <span class="bar2">▇░░░░░░░░░</span>  <span class="v">2%</span>  <span class="d">限额 $30 · 09-14 重置</span>
+  本月     <span class="bar3">▇▇▇▇▇░░░░░</span>  <span class="v">42%</span> <span class="d">限额 $60 · 10-01 重置</span>
+  <span class="t">限额按美元价值计，有效额度因模型乘数而异（docs/go）；percent 以服务端为准</span>
+
+  缓存命中率
+    占输入        今日 <span class="c">86.9%</span> ▇▇▇▇▇▇▇▇░░   累计 <span class="c">97.4%</span> ▇▇▇▇▇▇▇▇▇░
+    缓存读写占比  今日 <span class="c">100.0%</span> ▇▇▇▇▇▇▇▇▇▇  累计 <span class="c">99.96%</span> ▇▇▇▇▇▇▇▇▇▇
+
+  模型 (<span class="h">12</span>)                                    <span class="t">请求 · tokens · 费用标记</span>
+  <span class="d">──────────────────────────────────────────────────</span>
+  deepseek-v4-flash   <span class="h">15,938</span>   4.7B tok   <span class="a">$33.76</span>   <span class="abar1">▇▇▇▇▇▇▇▇▇▇</span>
+  deepseek-v4-pro      <span class="h">8,253</span>   1.4B tok   <span class="a">$92.52</span>   <span class="abar2">▇▇▇▇▇</span>
+  minimax-m3           <span class="h">1,057</span> 113.9M tok    <span class="a">$8.82</span>   <span class="abar2">▇</span>
+  glm-5.1                <span class="h">596</span>  68.1M tok   <span class="a">$22.26</span>   <span class="abar2">▏</span>
+  omen-alpha             <span class="h">514</span>  58.5M tok    <span class="a">$3.77</span>
+  qwen3.7-plus           <span class="h">183</span>  15.1M tok    <span class="a">$2.39</span>
+  mimo-v2.5-pro          <span class="h">154</span>  56.7M tok    <span class="a">$3.26</span>
+  <span class="d">… +5 (mimo-v2.5 / kimi-k2.6 / hy3 / ox-alpha-free / kimi-k2.7-code)</span>
+
+  近 7 天
+  <span class="d">──────────────────────────────────────────────────</span>
+  09-01  <span class="t">▇▇</span>        <span class="h">106</span> 请求   32.5M tok   <span class="a">$1.02</span>
+  09-02  <span class="t">▇▇</span>        <span class="h">110</span> 请求   47.7M tok   <span class="a">$0.86</span>
+  09-03  <span class="t">·</span>          <span class="h">0</span> 请求    0.0M tok   <span class="d">$0.00</span>
+  09-04  <span class="t">▇▇▇▇</span>      <span class="h">266</span> 请求   81.8M tok   <span class="a">$2.55</span>
+  09-05  <span class="t">▇▇▇▇</span>      <span class="h">291</span> 请求   36.6M tok   <span class="a">$3.14</span>
+  09-06  <span class="t">▇▇▇▇▇</span>    <span class="h">335</span> 请求   31.3M tok   <span class="a">$3.07</span>
+  09-07  <span class="t">▇▇▇▇</span>      <span class="h">268</span> 请求   24.1M tok   <span class="a">$1.44</span>
+
+  <span class="d">口径：providerID=opencode-go · 时间按本地日历日 · 数据只读自 opencode.db；额度来自官方 API</span></div>
+
+    <div class="annot">
+      <span class="tag">CLI 规格</span>
+      <ul>
+        <li><b>命令</b>：<span class="k">node bin/opencode-usage.js go</span>（= <span class="k">npm run usage -- go</span>），与 today/week/all 同级。</li>
+        <li><b>额度区（violet）</b>：三条窗口 + 限额参考值（$12/$30/$60）+ 重置时间。percent 直接展示 API 返回值，<b>不</b>换算美元余额（API 不返回金额，issue #41981 仍 open；换算会因模型乘数失真）。</li>
+        <li><b>额度数据获取</b>：读 <span class="k">auth.json → opencode-go.key</span>，Bearer 调 <span class="k">/zen/go/v1/usage</span>。失败（离线/无 key/403 无订阅）→ 额度区显示一行"额度不可用：&lt;原因&gt;"，退出码仍 0。</li>
+        <li><b>status=rate-limited</b>：该行红色 <span class="k">!!</span> 前缀 + percent=100，尾部提示"可切换免费模型（opencode/*）"。</li>
+        <li><b>模型表</b>：全量按请求量降序（<span class="k">--sort cost</span> 可选）。柱宽按请求量归一化。</li>
+        <li><b>命中率双口径</b>：占输入 = cacheRead/(input+cacheRead+cacheWrite)；读写占比 = cacheRead/(cacheRead+cacheWrite)。今日+累计两列。</li>
+        <li><b>JSON</b>：<span class="k">--json</span> 输出 {local, quota} 两段——local 来自数据层 <span class="k">getGoUsage()</span>，quota 来自 API（成功时含三窗口对象，失败时 null + reason），供小窗口复用。</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ============ 3. 额度规则速查（来自官方文档） ============ -->
+  <h2>③ Go 套餐额度规则速查（opencode.ai/docs/go/，2026-09-07 版）</h2>
+  <div class="annot" style="max-width:none">
+    <ul>
+      <li><b>订阅</b>：$10/月。限额按<b>美元价值</b>计：5 小时 $12 / 每周 $30 / 每月 $60。</li>
+      <li><b>有效额度因模型而异</b>：每个模型有独立月额度乘数（如 MiMo-V2.5 $60 ≈ 15 万请求/月；DeepSeek V4 Pro $15 ≈ 5,200/月；Omen Alpha $100）。因此<b>同一 percent 在不同模型下含义不同</b>，UI 不做"剩余请求数"换算，只展示服务端 percent。</li>
+      <li><b>API 权威</b>：<span class="k">GET /zen/go/v1/usage</span>（Bearer key）→ {usage: {rolling/weekly/monthly: {status: "ok"|"rate-limited", percent: 0-100, resetsAt}}}。错误：401 AuthError（key 无效）、403 EntitlementError（无 Go 订阅）。不返回美元金额/余额。</li>
+      <li><b>超限行为</b>：开启 "Use balance" → 回退 Zen 余额继续；否则阻止请求。免费模型（providerID=opencode）始终可用。</li>
+      <li><b>价格参考</b>：DeepSeek V4 系分峰谷（peak = 周一至五 01:00–04:00、06:00–10:00 UTC，其余 off-peak，价差 2 倍）——解释本地 cost 标记波动；UI 不标注峰谷（复杂度不值）。</li>
+      <li><b>轮询纪律</b>：端点每次查询是服务端三表 join，社区建议 ≥5min 缓存；端点无 Cache-Control / X-RateLimit 头。实现用 5min 定时 + 手动刷新穿透。</li>
+    </ul>
+  </div>
+</div>
+
+<script>
+  // tab 切换预览（仅设计稿交互，非实现代码）
+  const card = document.querySelector("#w-go .card");
+  card.addEventListener("click", (e) => {
+    const btn = e.target.closest(".tab");
+    if (!btn) return;
+    card.querySelectorAll(".tab").forEach((t) => t.classList.toggle("on", t === btn));
+    card.querySelectorAll(".pane").forEach((p) => (p.style.display = p.dataset.pane === btn.dataset.p ? "" : "none"));
+  });
+</script>
+</body>
+</html>

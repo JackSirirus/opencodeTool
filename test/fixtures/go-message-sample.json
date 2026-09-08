@@ -1,0 +1,80 @@
+{
+  "source": "message.data JSON column of the local opencode SQLite DB",
+  "probedAt": "2026-09-07",
+  "note": "Redacted structural samples (3 assistant rows, providerID=opencode-go). String values replaced with length markers, numbers replaced with N. No real message content, no credentials.",
+  "table": {
+    "name": "message",
+    "columns": ["id TEXT PRIMARY KEY", "session_id TEXT", "time_created INTEGER", "time_updated INTEGER", "data TEXT"]
+  },
+  "samples": [
+    {
+      "parentID": "<redacted len=30>",
+      "role": "assistant",
+      "mode": "<redacted len=5>",
+      "agent": "<redacted len=5>",
+      "variant": "<redacted len=4>",
+      "path": {
+        "cwd": "<redacted len=14>",
+        "root": "<redacted len=1>"
+      },
+      "cost": "N",
+      "tokens": {
+        "total": "N",
+        "input": "N",
+        "output": "N",
+        "reasoning": "N",
+        "cache": { "write": "N", "read": "N" }
+      },
+      "modelID": "deepseek-v4-flash",
+      "providerID": "opencode-go",
+      "time": { "created": "N", "completed": "N" },
+      "finish": "<redacted len=4>"
+    },
+    {
+      "parentID": "<redacted len=30>",
+      "role": "assistant",
+      "mode": "<redacted len=5>",
+      "agent": "<redacted len=5>",
+      "variant": "<redacted len=3>",
+      "path": {
+        "cwd": "<redacted len=14>",
+        "root": "<redacted len=1>"
+      },
+      "cost": "N",
+      "tokens": {
+        "total": "N",
+        "input": "N",
+        "output": "N",
+        "reasoning": "N",
+        "cache": { "write": "N", "read": "N" }
+      },
+      "modelID": "deepseek-v4-pro",
+      "providerID": "opencode-go",
+      "time": { "created": "N", "completed": "N" },
+      "finish": "<redacted len=10>"
+    },
+    {
+      "parentID": "<redacted len=30>",
+      "role": "assistant",
+      "mode": "<redacted len=5>",
+      "agent": "<redacted len=5>",
+      "variant": "<redacted len=3>",
+      "path": {
+        "cwd": "<redacted len=14>",
+        "root": "<redacted len=1>"
+      },
+      "cost": "N",
+      "tokens": {
+        "total": "N",
+        "input": "N",
+        "output": "N",
+        "reasoning": "N",
+        "cache": { "write": "N", "read": "N" }
+      },
+      "modelID": "deepseek-v4-pro",
+      "providerID": "opencode-go",
+      "time": { "created": "N", "completed": "N" },
+      "finish": "<redacted len=4>"
+    }
+  ]
+}

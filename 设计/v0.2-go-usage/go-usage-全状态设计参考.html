@@ -1,0 +1,597 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>opencodeTool · Go 套餐视图 全状态设计参考 v1-draft</title>
+<style>
+  :root {
+    --bg-0: #0a0d12; --bg-1: #0f141b; --bg-2: #161d27; --bg-3: #1d2532;
+    --border: rgba(255,255,255,0.08); --border-strong: rgba(255,255,255,0.16); --border-soft: rgba(255,255,255,0.04);
+    --fg: rgba(255,255,255,0.94); --fg-2: rgba(255,255,255,0.62); --fg-3: rgba(255,255,255,0.38); --fg-4: rgba(255,255,255,0.22);
+    --amber: #f5b942; --amber-soft: rgba(245,185,66,0.18); --amber-glow: rgba(245,185,66,0.35);
+    --coral: #ff8a3d; --cyan: #7ed3ff; --cyan-soft: rgba(126,211,255,0.16);
+    --violet: #c4b5fd; --violet-soft: rgba(196,181,253,0.16);
+    --danger: #ff6b6b; --warn: #fbbf24;
+    --mono: "Cascadia Mono","JetBrains Mono","Consolas",ui-monospace,monospace;
+    --ui: "Segoe UI Variable","Segoe UI","PingFang SC","Microsoft YaHei UI",system-ui,sans-serif;
+    --r-sm: 6px; --r-md: 10px; --r-lg: 14px;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 40px 24px 80px; background: #07090d; color: var(--fg);
+         font-family: var(--ui); font-size: 13px; line-height: 1.55; }
+  .page { max-width: 1180px; margin: 0 auto; }
+  h1 { font-size: 20px; margin: 0 0 6px; }
+  .meta { color: var(--fg-3); font-size: 12px; margin-bottom: 20px; }
+  h2 { font-size: 15px; margin: 44px 0 6px; font-weight: 600; border-top: 1px solid var(--border-soft); padding-top: 28px; }
+  .sub2 { color: var(--fg-3); font-size: 12px; margin: 0 0 16px; }
+  h3 { font-size: 13px; color: var(--fg-2); margin: 24px 0 8px; }
+  .toc { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0 8px; }
+  .toc a { font-size: 12px; color: var(--cyan); text-decoration: none; background: var(--bg-1);
+           border: 1px solid var(--border-soft); padding: 4px 10px; border-radius: 99px; }
+  .toc a:hover { border-color: var(--border-strong); }
+
+  /* 状态标签 */
+  .st { display: inline-block; font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 99px;
+        margin-bottom: 10px; font-family: var(--mono); }
+  .st.ok { background: rgba(127,216,143,0.15); color: #7fd88f; }
+  .st.load { background: var(--cyan-soft); color: var(--cyan); }
+  .st.empty { background: var(--amber-soft); color: var(--amber); }
+  .st.err { background: rgba(255,107,107,0.15); color: var(--danger); }
+  .st.warn { background: rgba(251,191,36,0.14); color: var(--warn); }
+  .st.info { background: var(--violet-soft); color: var(--violet); }
+
+  section.state { display: flex; gap: 40px; align-items: flex-start; flex-wrap: wrap; }
+  .annot { flex: 1; min-width: 420px; color: var(--fg-2); }
+  .annot ul { padding-left: 18px; margin: 6px 0; }
+  .annot li { margin: 5px 0; }
+  .annot code, .term code, .kv code { font-family: var(--mono); font-size: 11.5px; color: var(--violet); }
+  .annot .k { font-family: var(--mono); font-size: 12px; color: var(--amber); }
+
+  /* ============ widget mockup（复用设计稿 v2） ============ */
+  .widget { width: 300px; height: 400px; padding: 4px; text-align: left; flex-shrink: 0; }
+  .card { position: relative; width: 100%; height: 100%; display: flex; flex-direction: column;
+          border-radius: var(--r-lg); border: 1px solid var(--border);
+          background: radial-gradient(140% 90% at 100% 0%, rgba(245,185,66,0.07), transparent 55%),
+                      linear-gradient(160deg, var(--bg-2), var(--bg-1) 60%, var(--bg-0));
+          box-shadow: 0 18px 40px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.06); overflow: hidden; }
+  .hdr { display: flex; align-items: center; gap: 6px; padding: 10px 10px 6px; }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--amber); box-shadow: 0 0 8px var(--amber-glow); }
+  .dot.gray { background: var(--fg-4); box-shadow: none; }
+  .dot.red { background: var(--danger); box-shadow: 0 0 8px rgba(255,107,107,0.4); }
+  .brand { font-size: 11px; color: var(--fg-2); font-weight: 600; }
+  .tabs { display: flex; margin-left: 6px; background: var(--bg-0); border: 1px solid var(--border-soft);
+          border-radius: 99px; padding: 2px; }
+  .tab { font-size: 10px; padding: 2px 10px; border-radius: 99px; color: var(--fg-3); }
+  .tab.on { background: var(--amber-soft); color: var(--amber); font-weight: 600; }
+  .iconbtn { margin-left: auto; display: flex; gap: 4px; }
+  .ib { width: 20px; height: 20px; border-radius: var(--r-sm); border: 1px solid var(--border-soft);
+        color: var(--fg-3); display: grid; place-items: center; font-size: 9px; }
+  .pane { flex: 1; display: flex; flex-direction: column; padding: 2px 10px 8px; min-height: 0; }
+  .hero { padding: 4px 0 8px; }
+  .hero .lbl { font-size: 10px; color: var(--fg-3); letter-spacing: 0.6px; }
+  .hero .big { font-family: var(--mono); font-size: 28px; font-weight: 600; color: var(--amber);
+               text-shadow: 0 0 24px var(--amber-glow); line-height: 1.15; }
+  .hero .big small { font-size: 13px; color: var(--fg-3); font-weight: 400; margin-left: 4px; }
+  .hero .big.dim { color: var(--fg-4); text-shadow: none; }
+  .hero .sub { font-size: 11px; color: var(--fg-3); font-family: var(--mono); }
+  .hero .sub b { color: var(--fg-2); font-weight: 600; }
+  .banner { display: flex; align-items: center; gap: 6px; font-size: 10px; padding: 5px 9px;
+            border-radius: var(--r-sm); margin: 0 0 6px; background: rgba(255,107,107,0.1);
+            border: 1px solid rgba(255,107,107,0.22); color: var(--danger); }
+  .banner .bdot { width: 5px; height: 5px; border-radius: 50%; background: var(--danger);
+                  animation: none; }
+  .banner.amber { background: var(--amber-soft); border-color: rgba(245,185,66,0.25); color: var(--amber); }
+  .banner.amber .bdot { background: var(--amber); }
+  .quota { padding: 7px 0 9px; border-top: 1px solid var(--border-soft); }
+  .qhead { display: flex; justify-content: space-between; font-size: 10px; color: var(--fg-3);
+           letter-spacing: 0.5px; margin-bottom: 6px; }
+  .qhead .src { color: var(--violet); font-family: var(--mono); font-size: 9px; }
+  .qhead .src.down { color: var(--fg-4); }
+  .qrow { display: grid; grid-template-columns: 40px 1fr 36px 62px; align-items: center; gap: 7px; margin-bottom: 5px; }
+  .qrow:last-child { margin-bottom: 0; }
+  .qrow .n { font-size: 10px; color: var(--fg-2); }
+  .qrow .bar { height: 4px; border-radius: 99px; background: rgba(255,255,255,0.06); overflow: hidden; }
+  .qrow .bar i { display: block; height: 100%; border-radius: 99px; background: linear-gradient(90deg, var(--violet), #9f8cfa); }
+  .qrow.warn .bar i { background: linear-gradient(90deg, var(--warn), var(--coral)); }
+  .qrow.hit .bar i { background: linear-gradient(90deg, var(--danger), #e04848); }
+  .qrow .v { font-size: 10.5px; font-family: var(--mono); color: var(--violet); text-align: right; }
+  .qrow.warn .v { color: var(--warn); }
+  .qrow.hit .v { color: var(--danger); }
+  .qrow .r { font-size: 9px; color: var(--fg-4); font-family: var(--mono); text-align: right; white-space: nowrap; }
+  .qdown { font-size: 10px; color: var(--fg-4); font-family: var(--mono); padding: 10px 0; }
+  .skel { position: relative; overflow: hidden; background: rgba(255,255,255,0.05); }
+  .skel::after { content: ""; position: absolute; inset: 0;
+                 background: linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent);
+                 animation: pulse 1.4s infinite; }
+  @keyframes pulse { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
+  .hits { display: flex; flex-direction: column; gap: 6px; padding: 7px 0 9px; border-top: 1px solid var(--border-soft); }
+  .hit { display: grid; grid-template-columns: 92px 1fr 52px; align-items: center; gap: 8px; }
+  .hit .n { font-size: 10px; color: var(--fg-3); }
+  .hit .bar { height: 4px; border-radius: 99px; background: rgba(255,255,255,0.06); overflow: hidden; }
+  .hit .bar i { display: block; height: 100%; border-radius: 99px; }
+  .hit .v { font-size: 11px; font-family: var(--mono); text-align: right; }
+  .hit.a .bar i { background: linear-gradient(90deg, var(--amber), var(--coral)); }
+  .hit.a .v { color: var(--amber); }
+  .hit.c .bar i { background: linear-gradient(90deg, var(--cyan), #4aa8d8); }
+  .hit.c .v { color: var(--cyan); }
+  .rows { display: flex; flex-direction: column; gap: 2px; padding-bottom: 7px; border-top: 1px solid var(--border-soft); }
+  .rowi { display: flex; align-items: baseline; gap: 8px; padding: 4px 0; }
+  .rowi .lbl { font-size: 11px; color: var(--fg-3); width: 30px; }
+  .rowi .req { font-family: var(--mono); font-size: 13px; font-weight: 600; color: var(--fg); }
+  .rowi .req small { font-size: 10px; color: var(--fg-4); font-weight: 400; margin-left: 2px; }
+  .rowi .meta { margin-left: auto; font-size: 10px; color: var(--fg-3); font-family: var(--mono); }
+  .rowi.strong { border-top: 1px dashed var(--border-soft); }
+  .lists { display: flex; flex-direction: column; gap: 4px; flex: 1; min-height: 0; border-top: 1px solid var(--border-soft); padding-top: 7px; }
+  .lhead { display: flex; justify-content: space-between; font-size: 10px; color: var(--fg-3); letter-spacing: 0.5px; }
+  .lhead .h { color: var(--fg-4); font-family: var(--mono); }
+  ol.mlist { list-style: none; margin: 4px 0 0; padding: 0; display: flex; flex-direction: column; gap: 3px; }
+  ol.mlist li { display: flex; align-items: center; gap: 7px; font-size: 11px; padding: 2px 6px;
+                border-radius: var(--r-sm); background: rgba(255,255,255,0.025); border: 1px solid var(--border-soft); }
+  ol.mlist .idx { font-family: var(--mono); font-size: 9px; color: var(--fg-4); }
+  ol.mlist .nm { color: var(--fg-2); font-family: var(--mono); font-size: 10px; overflow: hidden;
+                 text-overflow: ellipsis; white-space: nowrap; }
+  ol.mlist .rq { margin-left: auto; font-family: var(--mono); font-size: 10px; color: var(--cyan); }
+  ol.mlist .co { font-family: var(--mono); font-size: 10px; color: var(--amber); width: 48px; text-align: right; }
+  ol.mlist .empty { justify-content: center; color: var(--fg-4); font-size: 10.5px; background: transparent;
+                    border: 1px dashed var(--border-soft); }
+  .foot { margin-top: auto; padding-top: 5px; font-size: 9.5px; color: var(--fg-4); font-family: var(--mono);
+          display: flex; justify-content: space-between; }
+
+  /* CLI 块 */
+  .term { background: #0b0e13; border: 1px solid var(--border); border-radius: var(--r-md);
+          font-family: var(--mono); font-size: 11.5px; line-height: 1.6; color: var(--fg-2);
+          padding: 12px 16px; overflow-x: auto; white-space: pre; }
+  .term .t { color: var(--fg-4); } .term .h { color: var(--fg); font-weight: 700; }
+  .term .a { color: var(--amber); } .term .c { color: var(--cyan); }
+  .term .v { color: var(--violet); } .term .d { color: var(--fg-3); }
+  .term .e { color: var(--danger); } .term .w { color: var(--warn); }
+
+  /* 规则表 */
+  table.rules { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 8px; }
+  table.rules th { text-align: left; color: var(--fg-3); font-weight: 600; font-size: 11px;
+                   letter-spacing: 0.5px; padding: 8px 10px; border-bottom: 1px solid var(--border-strong); }
+  table.rules td { padding: 9px 10px; border-bottom: 1px solid var(--border-soft); vertical-align: top; color: var(--fg-2); }
+  table.rules td:first-child { white-space: nowrap; }
+  .pill { display: inline-block; font-size: 10px; padding: 1px 8px; border-radius: 99px; font-family: var(--mono); }
+  .pill.u { background: var(--amber-soft); color: var(--amber); }
+  .pill.s { background: var(--cyan-soft); color: var(--cyan); }
+  .pill.x { background: rgba(255,107,107,0.14); color: var(--danger); }
+  .pill.e { background: var(--violet-soft); color: var(--violet); }
+  .kv { background: var(--bg-1); border: 1px solid var(--border-soft); border-radius: var(--r-md);
+        padding: 12px 16px; font-size: 12px; color: var(--fg-2); margin: 10px 0; }
+  .kv b { color: var(--fg); }
+</style>
+</head>
+<body>
+<div class="page">
+  <h1>OpenCode Go 套餐视图 · 全状态设计参考 <code style="font-family:var(--mono);color:var(--amber)">v1-draft</code></h1>
+  <div class="meta">2026-09-07 · 依赖 <b>设计稿 v2</b>（正常态布局见 <span style="color:var(--amber)">go-usage-设计稿.html</span>，本文件只覆盖<b>非正常态与交互规则</b>）· 小窗口 300×400 · CLI = <span style="font-family:var(--mono)">usage go</span></div>
+
+  <div class="toc">
+    <a href="#s1">S1 加载态</a><a href="#s2">S2 空态（0 请求）</a><a href="#s3">S3 额度 API 不可用</a>
+    <a href="#s4">S4 无订阅/key 无效</a><a href="#s5">S5 rate-limited</a><a href="#s6">S6 本地 DB 不可用</a>
+    <a href="#s7">S7 边界情况</a><a href="#s8">S8 CLI 全状态</a><a href="#s9">交互行为规则表</a><a href="#s10">反馈规范（banner）</a>
+  </div>
+
+  <div class="kv">
+    <b>设计基调</b>：两个数据源（本地 SQLite / 官方额度 API）<b>独立加载、独立降级、互不阻塞</b>。
+    任何一个失败只降级自己的区块，另一区块照常工作。反馈统一用顶部 <b>banner</b>（沿用现有 widget 模式，不引入 toast——
+    悬浮窗常驻场景下 toast 会打断感，banner 可常驻直至恢复）。
+  </div>
+
+  <!-- ==================== S1 ==================== -->
+  <h2 id="s1">S1 · 加载态</h2>
+  <p class="sub2">触发：窗口启动后首次数据到达前（本地 &lt;1s，额度首拉 &lt;2s，但按最慢者展示）；手动刷新点击后 420ms 内。</p>
+  <section class="state">
+    <div class="widget"><div class="card">
+      <div class="hdr"><span class="dot"></span><span class="brand">OpenCode</span>
+        <span class="tabs"><span class="tab">费用</span><span class="tab on">Go</span></span>
+        <span class="iconbtn"><span class="ib">↻</span><span class="ib">✕</span></span></div>
+      <div class="pane">
+        <div class="hero">
+          <div class="lbl">今日请求</div>
+          <div class="big dim">···</div>
+          <div class="sub">获取数据中…</div>
+        </div>
+        <div class="quota">
+          <div class="qhead"><span>套餐额度</span><span class="src">连接中</span></div>
+          <div class="qrow"><span class="n">5小时</span><span class="bar skel"><i style="width:0"></i></span><span class="v">··</span><span class="r">···</span></div>
+          <div class="qrow"><span class="n">本周</span><span class="bar skel"><i style="width:0"></i></span><span class="v">··</span><span class="r">···</span></div>
+          <div class="qrow"><span class="n">本月</span><span class="bar skel"><i style="width:0"></i></span><span class="v">··</span><span class="r">···</span></div>
+        </div>
+        <div class="hits">
+          <div class="hit a"><span class="n">缓存命中·今日</span><span class="bar"><i style="width:0"></i></span><span class="v">—</span></div>
+          <div class="hit c"><span class="n">缓存命中·累计</span><span class="bar"><i style="width:0"></i></span><span class="v">—</span></div>
+        </div>
+        <div class="rows">
+          <div class="rowi"><span class="lbl">本周</span><span class="req">—</span><span class="meta">— tok · $—</span></div>
+          <div class="rowi strong"><span class="lbl">累计</span><span class="req">—</span><span class="meta">— tok · $—</span></div>
+        </div>
+        <div class="lists"><div class="lhead"><span>模型 TOP 3</span><span class="h">请求 / 费用标记</span></div>
+          <ol class="mlist"><li class="empty">加载中…</li></ol></div>
+        <div class="foot"><span>读写占比 —</span><span>完整明细 → usage go</span></div>
+      </div>
+    </div></div>
+    <div class="annot">
+      <ul>
+        <li><b>数字区</b>："···" 占位（等宽 mono，防布局跳动），不用 spinner 遮罩——悬浮窗忌遮挡。</li>
+        <li><b>额度条</b>：skeleton 脉冲动画（1.4s 循环），header 右侧状态字"连接中"。</li>
+        <li><b>交互</b>：Tab/关闭按钮<b>保持可用</b>（加载中允许切视图/关窗），刷新按钮禁用旋转态。</li>
+        <li><b>超时</b>：本地 3s 未返回 → 直接进入 S6 降级；额度 8s 超时 → 进入 S3。无无限加载态。</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ==================== S2 ==================== -->
+  <h2 id="s2">S2 · 空态（订阅了 Go 但本机 0 请求）</h2>
+  <p class="sub2">触发：DB 无 providerID=opencode-go 的 assistant 消息；额度 API 正常返回。</p>
+  <section class="state">
+    <div class="widget"><div class="card">
+      <div class="hdr"><span class="dot"></span><span class="brand">OpenCode</span>
+        <span class="tabs"><span class="tab">费用</span><span class="tab on">Go</span></span>
+        <span class="iconbtn"><span class="ib">↻</span><span class="ib">✕</span></span></div>
+      <div class="pane">
+        <div class="hero">
+          <div class="lbl">今日请求</div>
+          <div class="big">0<small>次</small></div>
+          <div class="sub"><b>0</b> tok · <b>$0.00</b> · 09-07 16:4x</div>
+        </div>
+        <div class="quota">
+          <div class="qhead"><span>套餐额度</span><span class="src">server · 5h $12 / 周 $30 / 月 $60</span></div>
+          <div class="qrow"><span class="n">5小时</span><span class="bar"><i style="width:0%"></i></span><span class="v">0%</span><span class="r">2h11m 后重置</span></div>
+          <div class="qrow"><span class="n">本周</span><span class="bar"><i style="width:0%"></i></span><span class="v">0%</span><span class="r">09-14 重置</span></div>
+          <div class="qrow"><span class="n">本月</span><span class="bar"><i style="width:0%"></i></span><span class="v">0%</span><span class="r">10-01 重置</span></div>
+        </div>
+        <div class="hits">
+          <div class="hit a"><span class="n">缓存命中·今日</span><span class="bar"><i style="width:0"></i></span><span class="v">—</span></div>
+          <div class="hit c"><span class="n">缓存命中·累计</span><span class="bar"><i style="width:0"></i></span><span class="v">—</span></div>
+        </div>
+        <div class="rows">
+          <div class="rowi"><span class="lbl">本周</span><span class="req">0<small>次</small></span><span class="meta">0 tok · $0.00</span></div>
+          <div class="rowi strong"><span class="lbl">累计</span><span class="req">0<small>次</small></span><span class="meta">0 tok · $0.00</span></div>
+        </div>
+        <div class="lists"><div class="lhead"><span>模型 TOP 3 · 共 0</span><span class="h">请求 / 费用标记</span></div>
+          <ol class="mlist"><li class="empty">本机还没有 opencode-go 请求 · 在 OpenCode 里选 Go 模型开始使用</li></ol></div>
+        <div class="foot"><span>读写占比 —</span><span>完整明细 → usage go</span></div>
+      </div>
+    </div></div>
+    <div class="annot">
+      <ul>
+        <li><b>hero 显示 0 而非 —</b>：数据源可用但值为 0，是真实状态；"—" 留给数据源不可用。</li>
+        <li><b>额度区正常渲染</b>：API 有数据就展示（0 请求也可能因"用过但 DB 清空"→ percent 反而更高，这正是双数据源的意义）。</li>
+        <li><b>模型列表</b>：虚线空态行 + 引导文案"在 OpenCode 里选 Go 模型开始使用"。</li>
+        <li><b>命中率</b>：显示 "—"（分母为 0，无意义）。</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ==================== S3 ==================== -->
+  <h2 id="s3">S3 · 额度 API 不可用（网络失败 / 超时）</h2>
+  <p class="sub2">触发：fetch 失败、8s 超时、DNS 失败；本地统计不受影响。<b>这是最常见的异常态</b>。</p>
+  <section class="state">
+    <div class="widget"><div class="card">
+      <div class="hdr"><span class="dot"></span><span class="brand">OpenCode</span>
+        <span class="tabs"><span class="tab">费用</span><span class="tab on">Go</span></span>
+        <span class="iconbtn"><span class="ib">↻</span><span class="ib">✕</span></span></div>
+      <div class="pane">
+        <div class="hero">
+          <div class="lbl">今日请求</div>
+          <div class="big">268<small>次</small></div>
+          <div class="sub"><b>24.1M</b> tok · <b>$1.44</b> · 09-07 16:4x</div>
+        </div>
+        <div class="quota">
+          <div class="qhead"><span>套餐额度</span><span class="src down">额度数据不可用</span></div>
+          <div class="qdown">⚠ 无法连接 opencode.ai —— 检查网络后点 ↻ 重试<br>上次成功：16:02（42%）</div>
+        </div>
+        <div class="hits">
+          <div class="hit a"><span class="n">缓存命中·今日</span><span class="bar"><i style="width:86.9%"></i></span><span class="v">86.9%</span></div>
+          <div class="hit c"><span class="n">缓存命中·累计</span><span class="bar"><i style="width:97.4%"></i></span><span class="v">97.4%</span></div>
+        </div>
+        <div class="rows">
+          <div class="rowi"><span class="lbl">本周</span><span class="req">1,558<small>次</small></span><span class="meta">331.3M tok · $13.25</span></div>
+          <div class="rowi strong"><span class="lbl">累计</span><span class="req">26,991<small>次</small></span><span class="meta">6.41B tok · $168.99</span></div>
+        </div>
+        <div class="lists"><div class="lhead"><span>模型 TOP 3 · 共 12</span><span class="h">请求 / 费用标记</span></div>
+          <ol class="mlist">
+            <li><span class="idx">01</span><span class="nm">deepseek-v4-flash</span><span class="rq">15,938</span><span class="co">$33.76</span></li>
+            <li><span class="idx">02</span><span class="nm">deepseek-v4-pro</span><span class="rq">8,253</span><span class="co">$92.52</span></li>
+            <li><span class="idx">03</span><span class="nm">minimax-m3</span><span class="rq">1,057</span><span class="co">$8.82</span></li>
+          </ol></div>
+        <div class="foot"><span>读写占比口径 99.96%</span><span>完整明细 → usage go</span></div>
+      </div>
+    </div></div>
+    <div class="annot">
+      <ul>
+        <li><b>降级文案含"上次成功"锚点</b>：显示最后一次成功拉取的时间和当时的月度 percent——比单纯"失败"信息量大（用户最关心月额度）。</li>
+        <li><b>三窗口 bar 收起</b>，两行文字占位；区高从 74px 缩到 ~46px，lists flex 自动回填——<b>布局不塌</b>。</li>
+        <li><b>持续失败策略</b>：5min 轮询继续；连续 ≥3 次失败后轮询间隔退避到 15min（减少无效请求），手动刷新仍可穿透。</li>
+        <li><b>恢复</b>：任一次成功立即恢复三窗口渲染，无 banner（额度失败不打扰级 banner，仅区内降级）。</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ==================== S4 ==================== -->
+  <h2 id="s4">S4 · 无订阅 / key 无效（401 AuthError / 403 EntitlementError / auth.json 缺失）</h2>
+  <p class="sub2">触发：auth.json 无 <code>opencode-go</code> 条目；key 被撤销（401）；key 有效但订阅失效（403）。</p>
+  <section class="state">
+    <div class="widget"><div class="card">
+      <div class="hdr"><span class="dot gray"></span><span class="brand">OpenCode</span>
+        <span class="tabs"><span class="tab">费用</span><span class="tab on">Go</span></span>
+        <span class="iconbtn"><span class="ib">↻</span><span class="ib">✕</span></span></div>
+      <div class="pane">
+        <div class="hero">
+          <div class="lbl">今日请求</div>
+          <div class="big">268<small>次</small></div>
+          <div class="sub"><b>24.1M</b> tok · <b>$1.44</b> · 09-07 16:4x</div>
+        </div>
+        <div class="quota">
+          <div class="qhead"><span>套餐额度</span><span class="src down">未检测到 Go 订阅</span></div>
+          <div class="qdown">auth.json 中无 opencode-go 凭据，或订阅已过期。<br>订阅 / 换 key → opencode.ai/auth · 本地统计不受影响</div>
+        </div>
+        <div class="hits">
+          <div class="hit a"><span class="n">缓存命中·今日</span><span class="bar"><i style="width:86.9%"></i></span><span class="v">86.9%</span></div>
+          <div class="hit c"><span class="n">缓存命中·累计</span><span class="bar"><i style="width:97.4%"></i></span><span class="v">97.4%</span></div>
+        </div>
+        <div class="rows">
+          <div class="rowi"><span class="lbl">本周</span><span class="req">1,558<small>次</small></span><span class="meta">331.3M tok · $13.25</span></div>
+          <div class="rowi strong"><span class="lbl">累计</span><span class="req">26,991<small>次</small></span><span class="meta">6.41B tok · $168.99</span></div>
+        </div>
+        <div class="lists"><div class="lhead"><span>模型 TOP 3 · 共 12</span><span class="h">请求 / 费用标记</span></div>
+          <ol class="mlist">
+            <li><span class="idx">01</span><span class="nm">deepseek-v4-flash</span><span class="rq">15,938</span><span class="co">$33.76</span></li>
+            <li><span class="idx">02</span><span class="nm">deepseek-v4-pro</span><span class="rq">8,253</span><span class="co">$92.52</span></li>
+            <li><span class="idx">03</span><span class="nm">minimax-m3</span><span class="rq">1,057</span><span class="co">$8.82</span></li>
+          </ol></div>
+        <div class="foot"><span>读写占比口径 99.96%</span><span>完整明细 → usage go</span></div>
+      </div>
+    </div></div>
+    <div class="annot">
+      <ul>
+        <li><b>三种子场景统一为一个态</b>（用户视角无差别），文案统一"未检测到 Go 订阅"，副文案指引 opencode.ai/auth；日志里区分 401/403/缺失（排查用）。</li>
+        <li><b>与 S3 的区别</b>：S4 是确定性状态——<b>不再轮询 API</b>（auth.json 的 mtime 变化时才重查一次，支持用户中途订阅/换 key）。</li>
+        <li><b>header 圆点变灰</b>（.gray）：整体提示"有数据但服务端连接缺失"，区分正常琥珀点。</li>
+        <li><b>本地统计照常</b>：历史请求仍在 DB 里，视图完整可用。</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ==================== S5 ==================== -->
+  <h2 id="s5">S5 · rate-limited（达到限额）</h2>
+  <p class="sub2">触发：API 返回 <code>status: "rate-limited"</code>（该窗口 percent=100）。示例：5 小时窗口打满。</p>
+  <section class="state">
+    <div class="widget"><div class="card">
+      <div class="hdr"><span class="dot red"></span><span class="brand">OpenCode</span>
+        <span class="tabs"><span class="tab">费用</span><span class="tab on">Go</span></span>
+        <span class="iconbtn"><span class="ib">↻</span><span class="ib">✕</span></span></div>
+      <div class="pane">
+        <div class="banner"><span class="bdot"></span>Go 已达 5 小时上限 · 重置后自动恢复 · 期间可切免费模型（opencode/*）</div>
+        <div class="hero">
+          <div class="lbl">今日请求</div>
+          <div class="big">4,812<small>次</small></div>
+          <div class="sub"><b>312.4M</b> tok · <b>$11.87</b> · 09-07 16:4x</div>
+        </div>
+        <div class="quota">
+          <div class="qhead"><span>套餐额度</span><span class="src">server · 5h $12 / 周 $30 / 月 $60</span></div>
+          <div class="qrow hit"><span class="n">5小时</span><span class="bar"><i style="width:100%"></i></span><span class="v">100%</span><span class="r">38m 后重置</span></div>
+          <div class="qrow"><span class="n">本周</span><span class="bar"><i style="width:78%"></i></span><span class="v">78%</span><span class="r">09-14 重置</span></div>
+          <div class="qrow warn"><span class="n">本月</span><span class="bar"><i style="width:82%"></i></span><span class="v">82%</span><span class="r">10-01 重置</span></div>
+        </div>
+        <div class="hits">
+          <div class="hit a"><span class="n">缓存命中·今日</span><span class="bar"><i style="width:88.2%"></i></span><span class="v">88.2%</span></div>
+          <div class="hit c"><span class="n">缓存命中·累计</span><span class="bar"><i style="width:97.4%"></i></span><span class="v">97.4%</span></div>
+        </div>
+        <div class="rows">
+          <div class="rowi"><span class="lbl">本周</span><span class="req">9,201<small>次</small></span><span class="meta">1.2B tok · $24.10</span></div>
+          <div class="rowi strong"><span class="lbl">累计</span><span class="req">30,803<small>次</small></span><span class="meta">6.8B tok · $179.19</span></div>
+        </div>
+        <div class="lists"><div class="lhead"><span>模型 TOP 3 · 共 12</span><span class="h">请求 / 费用标记</span></div>
+          <ol class="mlist">
+            <li><span class="idx">01</span><span class="nm">deepseek-v4-flash</span><span class="rq">18,101</span><span class="co">$40.02</span></li>
+            <li><span class="idx">02</span><span class="nm">deepseek-v4-pro</span><span class="rq">8,834</span><span class="co">$98.11</span></li>
+            <li><span class="idx">03</span><span class="nm">minimax-m3</span><span class="rq">1,100</span><span class="co">$9.10</span></li>
+          </ol></div>
+        <div class="foot"><span>读写占比口径 99.96%</span><span>完整明细 → usage go</span></div>
+      </div>
+    </div></div>
+    <div class="annot">
+      <ul>
+        <li><b>顶部 banner（红）</b>：唯一上移到全局的异常——因为它影响工作流（请求被拒）。banner 含<b>重置倒计时</b>和<b>出路指引</b>（免费模型）。倒计时到点后随下次轮询自动消失。</li>
+        <li><b>额度条 hit 色</b>：触顶条 100% 红色 + 倒计时"38m 后重置"加重点；其他窗口条按各自色阶独立渲染（本月 82% 也可能同时 warn）。</li>
+        <li><b>header 圆点变红</b>（.red）：窗口最小化到只剩 header 时仍可感知状态。</li>
+        <li><b>hero 数字继续真实</b>：被打满那天的请求数照常累计显示——限流不隐藏用量。</li>
+        <li><b>如果开启 Use balance</b>：服务端不返回 rate-limited（走余额继续），本态不触发；是否开启本地无从判断，文档标注此局限。</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ==================== S6 ==================== -->
+  <h2 id="s6">S6 · 本地 DB 不可用（opencode.db 缺失 / 被锁 / 损坏）</h2>
+  <p class="sub2">触发：DB 文件不存在（OpenCode 从未启动）、readOnly 打开失败、query 异常。沿用现有 widget 的 banner 机制。</p>
+  <section class="state">
+    <div class="widget"><div class="card">
+      <div class="hdr"><span class="dot gray"></span><span class="brand">OpenCode</span>
+        <span class="tabs"><span class="tab">费用</span><span class="tab on">Go</span></span>
+        <span class="iconbtn"><span class="ib">↻</span><span class="ib">✕</span></span></div>
+      <div class="pane">
+        <div class="banner amber"><span class="bdot"></span>本地数据库不可用，等待中…（每 30s 重试）</div>
+        <div class="hero">
+          <div class="lbl">今日请求</div>
+          <div class="big dim">—</div>
+          <div class="sub">— tok · $— · —</div>
+        </div>
+        <div class="quota">
+          <div class="qhead"><span>套餐额度</span><span class="src">server · 5h $12 / 周 $30 / 月 $60</span></div>
+          <div class="qrow"><span class="n">5小时</span><span class="bar"><i style="width:7%"></i></span><span class="v">7%</span><span class="r">2h11m 后重置</span></div>
+          <div class="qrow"><span class="n">本周</span><span class="bar"><i style="width:2%"></i></span><span class="v">2%</span><span class="r">09-14 重置</span></div>
+          <div class="qrow warn"><span class="n">本月</span><span class="bar"><i style="width:42%"></i></span><span class="v">42%</span><span class="r">10-01 重置</span></div>
+        </div>
+        <div class="hits">
+          <div class="hit a"><span class="n">缓存命中·今日</span><span class="bar"><i style="width:0"></i></span><span class="v">—</span></div>
+          <div class="hit c"><span class="n">缓存命中·累计</span><span class="bar"><i style="width:0"></i></span><span class="v">—</span></div>
+        </div>
+        <div class="rows">
+          <div class="rowi"><span class="lbl">本周</span><span class="req">—</span><span class="meta">— tok · $—</span></div>
+          <div class="rowi strong"><span class="lbl">累计</span><span class="req">—</span><span class="meta">— tok · $—</span></div>
+        </div>
+        <div class="lists"><div class="lhead"><span>模型 TOP 3</span><span class="h">请求 / 费用标记</span></div>
+          <ol class="mlist"><li class="empty">等待本地数据库…</li></ol></div>
+        <div class="foot"><span>读写占比 —</span><span>完整明细 → usage go</span></div>
+      </div>
+    </div></div>
+    <div class="annot">
+      <ul>
+        <li><b>琥珀 banner（非红）</b>：DB 缺失是"环境未就绪"不是"故障"——用户可能还没装 OpenCode。每 30s 自动重试，恢复后 banner 自动消失。</li>
+        <li><b>额度区照常工作</b>：双数据源独立的价值时刻——DB 挂了仍能看到官方额度。</li>
+        <li><b>本地数值全部 "—"</b>：与 S1 加载态的 "···" 形成区分（不可用 ≠ 加载中）。</li>
+        <li><b>费用 tab 同样受影响</b>：banner 在两个 tab 共享（现有逻辑），切 tab 不丢状态。</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ==================== S7 ==================== -->
+  <h2 id="s7">S7 · 边界情况</h2>
+  <table class="rules">
+    <tr><th>边界</th><th>场景</th><th>处理规则</th></tr>
+    <tr><td>长模型名</td><td><code>deepseek-v4-flash-vision-exp</code>（27 字符）、<code>muse-spark-1.3-contributor</code></td>
+      <td>列表行 CSS ellipsis 截断 + <code>title</code> 悬浮全名；CLI 列宽按最长名 +2 自适应，超 22 字符截断为 <code>deepseek-v4-flash-v…</code></td></tr>
+    <tr><td>大数字</td><td>请求 26,991；token 6.41B；$168.99</td>
+      <td>窗口：请求数 &ge;10,000 千分位逗号；token 沿用 k/M/B；费用两位小数。CLI：请求数千分位，token k/M/B，费用两位小数</td></tr>
+    <tr><td>percent 边界</td><td>0% / 1% / 99% / 100%（未限流）</td>
+      <td>0% 渲染 2px 最小可见条；100% 但 status=ok（卡点但未触发限流）用 hit 红但不显示 banner——banner 只跟 status 走</td></tr>
+    <tr><td>倒计时边界</td><td>resetsAt &lt;60s；已过期（时钟偏移）</td>
+      <td>&lt;60s 显示"即将重置"；resetsAt &lt; now 显示"等待刷新"并在下个轮询周期修正；5h 倒计时格式 <code>2h11m</code>，&lt;1h <code>38m</code></td></tr>
+    <tr><td>重置时点</td><td>月 1 号 / 周一 00:00 UTC</td>
+      <td>resetsAt 以服务端为准直接格式化为日期（本地时区），不自行推算周期边界</td></tr>
+    <tr><td>token 全 0</td><td>模型返回空响应（kimi-k2.7-code 仅 1 次请求 0 token）</td>
+      <td>该模型照常进列表（请求数 1）；命中率分母含 0 时该项显示 "—"；CLI 柱宽 0 → 最小 1 字符</td></tr>
+    <tr><td>API key 明文</td><td>key 存 auth.json 明文</td>
+      <td>只读内存传递，<b>不写入日志、不进 --json 输出、错误信息不含 key</b>；--json 的 quota 段只有 percent/status/resetsAt</td></tr>
+    <tr><td>系统休眠唤醒</td><td>笔记本合盖过夜</td>
+      <td>唤醒后轮询计时器自然触发下一次；不补拉错过的周期；generatedAt 更新为最新</td></tr>
+  </table>
+
+  <!-- ==================== S8 ==================== -->
+  <h2 id="s8">S8 · CLI 全状态（usage go）</h2>
+  <h3>8.1 无 Go 数据（本地 0 请求，额度正常）</h3>
+  <div class="term"><span class="t">$ npm run usage -- go</span>
+
+  <span class="h">OpenCode Go 套餐</span>                          <span class="t">2026-09-07</span>
+  今日         <span class="h">0</span> 请求       <span class="h">0</span> tok     <span class="a">$0.00</span>
+  本周         <span class="h">0</span> 请求       <span class="h">0</span> tok     <span class="a">$0.00</span>
+  累计         <span class="h">0</span> 请求       <span class="h">0</span> tok     <span class="a">$0.00</span>
+
+  <span class="v">套餐额度</span>  <span class="t">(server)</span>
+  5 小时   <span class="v">7%</span>  <span class="d">2h11m 后重置</span> · 本周 <span class="v">2%</span> · 本月 <span class="v">42%</span>
+
+  模型
+  <span class="d">（本机还没有 opencode-go 请求）</span>
+
+  <span class="d">提示：在 OpenCode 中选择 opencode-go/* 模型开始使用</span></div>
+
+  <h3>8.2 额度 API 失败（本地数据正常）</h3>
+  <div class="term">  <span class="v">套餐额度</span>  <span class="t">(server)</span>
+  <span class="w">额度不可用：网络错误（ETIMEDOUT）</span>  <span class="d">· 上次成功 16:02（月 42%）</span>
+  <span class="d">本地统计不受影响；重试：npm run usage -- go --quota</span></div>
+
+  <h3>8.3 无订阅 / key 无效</h3>
+  <div class="term">  <span class="v">套餐额度</span>  <span class="t">(server)</span>
+  <span class="w">未检测到 Go 订阅</span>  <span class="d">（auth.json 无 opencode-go 凭据或已过期）
+  订阅 / 换 key → opencode.ai/auth</span></div>
+
+  <h3>8.4 rate-limited</h3>
+  <div class="term">  <span class="v">套餐额度</span>  <span class="t">(server)</span>
+  5 小时   <span class="e">!! ▇▇▇▇▇▇▇▇▇▇ 100%</span>  <span class="d">限额 $12 · 38m 后重置</span>
+  本周     <span class="v">78%</span>  <span class="d">09-14 重置</span> · 本月 <span class="w">82%</span>  <span class="d">10-01 重置</span>
+  <span class="e">5 小时窗口已达上限</span> <span class="d">· 期间可切免费模型（opencode/*），重置后自动恢复</span></div>
+
+  <h3>8.5 本地 DB 不可用（额度正常）</h3>
+  <div class="term">  <span class="d">本地数据库不可用：</span><span class="w">C:\Users\shige\.local\share\opencode\opencode.db 不存在</span>
+  <span class="d">提示：先启动一次 OpenCode 以生成数据库</span>
+
+  <span class="v">套餐额度</span>  <span class="t">(server)</span>
+  5 小时   <span class="v">7%</span>  <span class="d">2h11m 后重置</span> · 本周 <span class="v">2%</span> · 本月 <span class="v">42%</span></div>
+
+  <h3>8.6 --json 契约（双数据源独立成败）</h3>
+  <div class="term"><span class="t">$ npm run usage -- go --json</span>
+{
+  <span class="c">"generatedAt"</span>: <span class="a">"2026-09-07T16:45:01.000Z"</span>,
+  <span class="c">"local"</span>: {
+    <span class="c">"available"</span>: <span class="a">true</span>,
+    <span class="c">"today"</span>: { <span class="c">"requests"</span>: 268, <span class="c">"tokens"</span>: { <span class="c">"input"</span>, <span class="c">"output"</span>, <span class="c">"reasoning"</span>, <span class="c">"cacheRead"</span>, <span class="c">"cacheWrite"</span>, <span class="c">"total"</span> }, <span class="c">"cost"</span>: 1.44,
+                <span class="c">"hitRateOfInput"</span>: 0.869, <span class="c">"hitRateReadWrite"</span>: 1.0 },
+    <span class="c">"week"</span>: { ... }, <span class="c">"allTime"</span>: { ... },
+    <span class="c">"byDay"</span>: [ { <span class="c">"date"</span>, <span class="c">"requests"</span>, <span class="c">"tokens"</span>, <span class="c">"cost"</span> } ],          <span class="t">// 近7天，升序</span>
+    <span class="c">"byModel"</span>: [ { <span class="c">"id"</span>, <span class="c">"requests"</span>, <span class="c">"tokens"</span>, <span class="c">"cost"</span>, <span class="c">"lastUsedAt"</span> } ] <span class="t">// 全量，按请求降序</span>
+  },
+  <span class="c">"quota"</span>: {
+    <span class="c">"available"</span>: <span class="a">true</span>,
+    <span class="c">"fetchedAt"</span>: <span class="a">"2026-09-07T16:44:58.000Z"</span>,
+    <span class="c">"windows"</span>: { <span class="c">"rolling"</span>: { <span class="c">"status"</span>: <span class="a">"ok"</span>, <span class="c">"percent"</span>: 7, <span class="c">"resetsAt"</span>: <span class="a">"..."</span> },
+                 <span class="c">"weekly"</span>: { ... }, <span class="c">"monthly"</span>: { ... } }
+  }
+}
+<span class="t">// quota.available=false 时：{ "available": false, "reason": "network|no-subscription|no-credentials|timeout", "windows": null }
+// local 与 quota 互不牵连；两者永远同时输出</span></div>
+
+  <!-- ==================== S9 ==================== -->
+  <h2 id="s9">S9 · 交互行为规则表</h2>
+  <table class="rules">
+    <tr><th>触发</th><th>用户操作</th><th>系统行为</th><th>反馈</th></tr>
+    <tr><td><span class="pill s">系统</span>启动</td><td>运行 <code>npm run widget</code></td>
+      <td>读 auth.json（识别 opencode-go 凭据）→ 打开窗口 → 并行：①本地 DB 汇总 ②额度 API（若凭据存在）</td>
+      <td>首屏 &lt;1s（本地区），额度区 skeleton 直到返回或 8s 超时进 S3/S4</td></tr>
+    <tr><td><span class="pill s">系统</span>每 30s</td><td>—</td>
+      <td>重查本地 DB（readOnly），推送 usage:update</td>
+      <td>数字平滑更新，无闪烁、无布局跳动；时间戳更新</td></tr>
+    <tr><td><span class="pill s">系统</span>每 5min</td><td>—</td>
+      <td>调 GET /zen/go/v1/usage；连续 ≥3 次失败 → 退避至 15min</td>
+      <td>额度三条更新；恢复后立即回到正常渲染</td></tr>
+    <tr><td><span class="pill u">用户</span>切 Tab</td><td>点击 费用 | Go</td>
+      <td>切换 pane（互斥渲染）；banner 状态两 tab 共享</td>
+      <td>tab 高亮迁移；数据不重拉（内存共享）；&lt;50ms</td></tr>
+    <tr><td><span class="pill u">用户</span>刷新</td><td>点击 ↻</td>
+      <td>立即重查本地 DB + <b>穿透额度缓存</b>重调 API</td>
+      <td>图标旋转 420ms；两区数据即时更新；额度失败时区内文案更新</td></tr>
+    <tr><td><span class="pill u">用户</span>关闭</td><td>点击 ✕</td>
+      <td>ipc widget:close → 销毁窗口 → 清理定时器 → 进程退出</td>
+      <td>窗口消失，无残留进程</td></tr>
+    <tr><td><span class="pill e">系统</span>凭据变化</td><td>用户中途在 opencode.ai/auth 订阅或换 key</td>
+      <td>监听 auth.json mtime 变化 → 重读凭据 → 若 S4 态则重试 API 一次</td>
+      <td>额度区从"未检测到订阅"恢复为三窗口（或维持失败文案）</td></tr>
+    <tr><td><span class="pill x">异常</span>额度 401/403</td><td>—</td>
+      <td>标记 quota 不可用（reason: no-subscription）；停止轮询，改为 mtime 触发</td>
+      <td>S4 渲染；header 圆点变灰；本地区照常</td></tr>
+    <tr><td><span class="pill x">异常</span>额度网络失败</td><td>—</td>
+      <td>标记 reason: network；保留 lastGood 快照；退避轮询</td>
+      <td>S3 渲染（含"上次成功"锚点）</td></tr>
+    <tr><td><span class="pill x">异常</span>rate-limited</td><td>—</td>
+      <td>status != ok 的窗口条置红；组织 banner 文案（含倒计时）</td>
+      <td>S5 渲染；重置窗口到点后下次轮询自动解除</td></tr>
+    <tr><td><span class="pill x">异常</span>DB 不可用</td><td>—</td>
+      <td>local.available=false；30s 重试</td>
+      <td>S6 渲染；琥珀 banner 常显直至恢复</td></tr>
+    <tr><td><span class="pill x">异常</span>CLI --quota 失败</td><td>显式请求额度</td>
+      <td>打印失败原因 + 上次成功锚点；<b>退出码仍 0</b>（数据获取成功，额度为空属正常分支）</td>
+      <td>见 S8.2/8.3 文案</td></tr>
+  </table>
+
+  <!-- ==================== S10 ==================== -->
+  <h2 id="s10">S10 · 反馈规范（banner，widget 无 toast）</h2>
+  <div class="kv">
+    <b>决策</b>：widget 全部反馈走<b>顶部 banner</b>（现有 widget 模式），不引入 toast。理由：悬浮窗常驻、面积小，toast 会遮挡内容且消失即失忆；
+    banner 可常驻至状态恢复，与"监控工具"心智一致。CLI 反馈 = 终端文案 + 退出码，无 toast 概念。
+  </div>
+  <table class="rules">
+    <tr><th>文案</th><th>样式</th><th>出现时机</th><th>消失时机</th></tr>
+    <tr><td>"Go 已达 5 小时上限 · 重置后自动恢复 · 期间可切免费模型（opencode/*）"</td><td>红 banner</td>
+      <td>任一窗口 status=rate-limited</td><td>下次轮询该窗口 status=ok（倒计时同步显示在 banner 内）</td></tr>
+    <tr><td>"本地数据库不可用，等待中…（每 30s 重试）"</td><td>琥珀 banner</td>
+      <td>DB 缺失/不可读</td><td>首次读取成功</td></tr>
+    <tr><td>"额度数据不可用" / "未检测到 Go 订阅"</td><td>仅额度区内文案，<b>不上 banner</b></td><td>S3 / S4</td><td>API 恢复 / 凭据出现</td></tr>
+    <tr><td>"额度数据不可用：&lt;reason&gt;（上次成功 HH:MM，月 N%）"</td><td>CLI 文案</td><td>CLI 额度失败</td><td>—</td></tr>
+    <tr><td>规则：同时最多 1 条 banner</td><td colspan="3">rate-limited 优先于 DB banner（影响工作流的排前）；两条同发时合并为一条红 banner 分行显示</td></tr>
+  </table>
+</div>
+</body>
+</html>

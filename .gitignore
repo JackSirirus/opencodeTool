@@ -1,0 +1,24 @@
+﻿
+# Node
+node_modules/
+
+# AI working data (private -- never publish)
+memory/
+MEMORY.md
+CLAUDE.md
+AGENT.md
+.omo/
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*~
+
+# Logs
+*.log

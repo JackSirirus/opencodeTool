@@ -1,0 +1,1165 @@
+/* ============================================================
+ * OpenCode 用量小窗口 — 暗色玻璃卡片
+ * 设计思路：科技仪表盘 + 终端感；温暖琥珀色作为费用主色
+ * ============================================================ */
+
+:root {
+  --bg-0: #0a0d12;
+  --bg-1: #0f141b;
+  --bg-2: #161d27;
+  --bg-3: #1d2532;
+
+  --border: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.16);
+  --border-soft: rgba(255, 255, 255, 0.04);
+
+  --fg: rgba(255, 255, 255, 0.94);
+  --fg-2: rgba(255, 255, 255, 0.62);
+  --fg-3: rgba(255, 255, 255, 0.38);
+  --fg-4: rgba(255, 255, 255, 0.22);
+
+  --amber: #f5b942;
+  --amber-soft: rgba(245, 185, 66, 0.18);
+  --amber-glow: rgba(245, 185, 66, 0.35);
+  --coral: #ff8a3d;
+  --cyan: #7ed3ff;
+  --cyan-soft: rgba(126, 211, 255, 0.16);
+  --violet: #c4b5fd;
+  --violet-soft: rgba(196, 181, 253, 0.16);
+  --danger: #ff6b6b;
+  --danger-soft: rgba(255, 107, 107, 0.16);
+  --warn: #fbbf24;
+
+  --mono: "Cascadia Mono", "JetBrains Mono", "Cascadia Code", "Consolas",
+    "SFMono-Regular", ui-monospace, monospace;
+  --ui: "Segoe UI Variable", "Segoe UI", "PingFang SC", "Microsoft YaHei UI",
+    system-ui, -apple-system, sans-serif;
+
+  --r-sm: 6px;
+  --r-md: 10px;
+  --r-lg: 14px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background: transparent;
+  color: var(--fg);
+  font-family: var(--ui);
+  font-size: 12px;
+  line-height: 1.4;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  user-select: none;
+  overflow: hidden;
+}
+
+body {
+  /* breathing room around the card */
+  padding: 4px;
+}
+
+/* ============================================================
+ * Card surface — dark glass with subtle gradient + inner glow
+ * ============================================================ */
+.card {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--r-lg);
+  background:
+    radial-gradient(
+      140% 90% at 100% 0%,
+      rgba(245, 185, 66, 0.06) 0%,
+      transparent 55%
+    ),
+    radial-gradient(
+      120% 80% at 0% 100%,
+      rgba(126, 211, 255, 0.05) 0%,
+      transparent 60%
+    ),
+    linear-gradient(160deg, var(--bg-2) 0%, var(--bg-1) 60%, var(--bg-0) 100%);
+  border: 1px solid var(--border);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.02),
+    0 10px 30px rgba(0, 0, 0, 0.45),
+    0 2px 6px rgba(0, 0, 0, 0.4);
+  -webkit-backdrop-filter: blur(18px) saturate(1.2);
+  backdrop-filter: blur(18px) saturate(1.2);
+  overflow: hidden;
+}
+
+.card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  background:
+    repeating-linear-gradient(
+      0deg,
+      rgba(255, 255, 255, 0.012) 0,
+      rgba(255, 255, 255, 0.012) 1px,
+      transparent 1px,
+      transparent 3px
+    );
+  mix-blend-mode: overlay;
+  opacity: 0.6;
+}
+
+/* ============================================================
+ * Header — draggable region
+ * ============================================================ */
+.card__header {
+  -webkit-app-region: drag;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px 8px 14px;
+  border-bottom: 1px solid var(--border-soft);
+  flex: 0 0 auto;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
+.brand__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--amber);
+  box-shadow:
+    0 0 0 3px var(--amber-soft),
+    0 0 8px var(--amber-glow);
+  animation: pulse 2.4s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 3px var(--amber-soft), 0 0 8px var(--amber-glow);
+  }
+  50% {
+    box-shadow: 0 0 0 5px rgba(245, 185, 66, 0.08), 0 0 12px var(--amber-glow);
+  }
+}
+
+.brand__title {
+  font-size: 12px;
+  color: var(--fg);
+  font-weight: 600;
+}
+
+.brand__sub {
+  font-size: 11px;
+  color: var(--fg-3);
+  font-weight: 400;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  -webkit-app-region: no-drag;
+}
+
+.iconbtn {
+  -webkit-app-region: no-drag;
+  appearance: none;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--fg-2);
+  width: 22px;
+  height: 22px;
+  border-radius: var(--r-sm);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition:
+    background 120ms ease,
+    border-color 120ms ease,
+    color 120ms ease,
+    transform 120ms ease;
+}
+
+.iconbtn:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: var(--border-strong);
+  color: var(--fg);
+}
+
+.iconbtn:active {
+  transform: scale(0.94);
+}
+
+.iconbtn svg {
+  width: 12px;
+  height: 12px;
+  fill: currentColor;
+}
+
+.iconbtn--danger:hover {
+  background: var(--danger-soft);
+  border-color: rgba(255, 107, 107, 0.32);
+  color: var(--danger);
+}
+
+.iconbtn--rotate svg {
+  transition: transform 400ms ease;
+}
+
+.iconbtn--rotate.is-spinning svg {
+  transform: rotate(360deg);
+}
+
+/* ============================================================
+ * Banner — unavailable state
+ * ============================================================ */
+.banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 6px 10px 0;
+  padding: 5px 10px;
+  border-radius: var(--r-sm);
+  background: rgba(251, 191, 36, 0.08);
+  border: 1px solid rgba(251, 191, 36, 0.22);
+  color: var(--warn);
+  font-size: 11px;
+  letter-spacing: 0.01em;
+  flex: 0 0 auto;
+}
+
+.banner--hidden {
+  display: none;
+}
+
+.banner__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--warn);
+  box-shadow: 0 0 6px rgba(251, 191, 36, 0.55);
+  flex: 0 0 auto;
+}
+
+/* ============================================================
+ * Hero — today's cost (the headline number)
+ * ============================================================ */
+.hero {
+  padding: 10px 14px 8px;
+  border-bottom: 1px solid var(--border-soft);
+  flex: 0 0 auto;
+}
+
+.hero__row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.hero__label {
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--fg-3);
+  font-weight: 500;
+}
+
+.hero__hint {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--fg-4);
+}
+
+.hero__cost {
+  display: flex;
+  align-items: baseline;
+  margin-top: 2px;
+  margin-bottom: 6px;
+  font-family: var(--mono);
+  font-feature-settings: "tnum" 1, "ss01" 1;
+  line-height: 1;
+}
+
+.hero__currency {
+  font-size: 15px;
+  color: var(--amber);
+  margin-right: 2px;
+  font-weight: 500;
+  opacity: 0.9;
+  transform: translateY(-2px);
+}
+
+.hero__amount {
+  font-size: 28px;
+  font-weight: 600;
+  color: var(--amber);
+  letter-spacing: -0.02em;
+  text-shadow: 0 0 18px rgba(245, 185, 66, 0.28);
+}
+
+.hero__sub {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 7px 3px 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border);
+  font-size: 11px;
+  color: var(--fg-2);
+}
+
+.chip__k {
+  color: var(--fg-3);
+  letter-spacing: 0.06em;
+}
+
+.chip__v {
+  font-family: var(--mono);
+  font-feature-settings: "tnum" 1;
+  color: var(--fg);
+  font-weight: 500;
+}
+
+.chip--alt {
+  background: var(--cyan-soft);
+  border-color: rgba(126, 211, 255, 0.18);
+}
+
+.chip--ghost {
+  background: transparent;
+  border-color: var(--border);
+}
+
+/* ============================================================
+ * Rows — week / all-time
+ * ============================================================ */
+.rows {
+  padding: 6px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  border-bottom: 1px solid var(--border-soft);
+  flex: 0 0 auto;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 36px 1fr auto;
+  align-items: baseline;
+  gap: 8px;
+  padding: 2px 0;
+  border-radius: var(--r-sm);
+}
+
+.row__label {
+  font-size: 11px;
+  color: var(--fg-3);
+  letter-spacing: 0.14em;
+}
+
+.row__cost {
+  font-family: var(--mono);
+  font-feature-settings: "tnum" 1;
+  font-size: 14px;
+  color: var(--fg);
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+
+.row--strong .row__cost {
+  font-size: 15px;
+  color: var(--amber);
+}
+
+.row__meta {
+  font-family: var(--mono);
+  font-feature-settings: "tnum" 1;
+  font-size: 10px;
+  color: var(--fg-3);
+  letter-spacing: 0.02em;
+}
+
+/* ============================================================
+ * Chart — 7-day bars (pure CSS)
+ * ============================================================ */
+.chart {
+  padding: 8px 14px 16px;
+  border-bottom: 1px solid var(--border-soft);
+  flex: 0 0 auto;
+}
+
+.chart__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.chart__title {
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--fg-3);
+  font-weight: 500;
+}
+
+.chart__hint {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--fg-3);
+}
+
+.chart__body {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+  align-items: end;
+  height: 44px;
+}
+
+.bar {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  height: 100%;
+  border-radius: 3px;
+  background: linear-gradient(
+    180deg,
+    var(--amber) 0%,
+    var(--coral) 100%
+  );
+  min-height: 2px;
+  transition:
+    height 320ms cubic-bezier(0.22, 1, 0.36, 1),
+    filter 200ms ease;
+  cursor: default;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    0 0 0 1px rgba(255, 255, 255, 0.04);
+}
+
+.bar--empty {
+  background: rgba(255, 255, 255, 0.05);
+  box-shadow: none;
+}
+
+.bar--today::after {
+  content: "";
+  position: absolute;
+  inset: -3px -2px auto -2px;
+  height: 3px;
+  border-radius: 3px;
+  background: var(--amber);
+  box-shadow: 0 0 6px var(--amber-glow);
+}
+
+.bar:hover {
+  filter: brightness(1.12);
+}
+
+.bar__day {
+  position: absolute;
+  bottom: -14px;
+  font-family: var(--mono);
+  font-size: 9px;
+  color: var(--fg-3);
+  letter-spacing: 0.02em;
+}
+
+.bar--today .bar__day {
+  color: var(--amber);
+}
+
+/* ============================================================
+ * Lists — top 3 models / projects (two columns)
+ * ============================================================ */
+.lists {
+  padding: 10px 10px 8px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: rgba(255, 255, 255, 0.015);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--r-md);
+  padding: 6px 7px 5px;
+}
+
+.list__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 0 1px 4px;
+  border-bottom: 1px dashed var(--border-soft);
+}
+
+.list__title {
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--cyan);
+  font-weight: 500;
+}
+
+.list:nth-child(2) .list__title {
+  color: var(--violet);
+}
+
+.list__hint {
+  font-family: var(--mono);
+  font-size: 9px;
+  color: var(--fg-4);
+  letter-spacing: 0.04em;
+}
+
+.list__items {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.list__item {
+  display: grid;
+  grid-template-columns: 12px 1fr auto;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 2px;
+  border-radius: 4px;
+  font-size: 11px;
+  color: var(--fg-2);
+  transition: background 120ms ease;
+}
+
+.list__item:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.list__idx {
+  font-family: var(--mono);
+  font-size: 9px;
+  color: var(--fg-4);
+  text-align: right;
+  font-feature-settings: "tnum" 1;
+}
+
+.list__name {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--fg);
+}
+
+.list__cost {
+  font-family: var(--mono);
+  font-feature-settings: "tnum" 1;
+  font-size: 10px;
+  color: var(--fg-2);
+}
+
+.list__empty {
+  padding: 6px 2px;
+  font-size: 10px;
+  color: var(--fg-4);
+  text-align: center;
+  font-style: italic;
+}
+
+/* ============================================================
+ * Initial fade-in (staggered reveal)
+ * ============================================================ */
+.card__header,
+.banner,
+.hero,
+.rows,
+.chart,
+.lists {
+  opacity: 0;
+  transform: translateY(4px);
+  animation: rise 360ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.card__header {
+  animation-delay: 0ms;
+}
+.banner:not(.banner--hidden) {
+  animation-delay: 40ms;
+}
+.hero {
+  animation-delay: 80ms;
+}
+.rows {
+  animation-delay: 120ms;
+}
+.chart {
+  animation-delay: 160ms;
+}
+.lists {
+  animation-delay: 200ms;
+}
+
+@keyframes rise {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card__header,
+  .banner,
+  .hero,
+  .rows,
+  .chart,
+  .lists {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+  .brand__dot {
+    animation: none;
+  }
+}
+
+/* ============================================================
+ * Go tab (v0.2) — ADDITIVE ONLY: every new class is go- prefixed
+ * (or one of the .tabs/.tab/.pane hooks T6 put in the DOM).
+ * Color semantics: amber = local usage · cyan = hit rate · violet = server quota
+ * ============================================================ */
+
+/* ---- tab strip + panes ------------------------------------ */
+.tabs {
+  display: flex;
+  align-items: center;
+  background: var(--bg-0);
+  border: 1px solid var(--border-soft);
+  border-radius: 999px;
+  padding: 2px;
+  -webkit-app-region: no-drag;
+}
+
+.tab {
+  appearance: none;
+  border: none;
+  background: transparent;
+  font-family: var(--ui);
+  font-size: 10px;
+  line-height: 1;
+  padding: 3px 10px;
+  border-radius: 999px;
+  color: var(--fg-3);
+  cursor: pointer;
+  transition:
+    background 120ms ease,
+    color 120ms ease;
+}
+
+.tab:hover {
+  color: var(--fg-2);
+}
+
+.tab.on {
+  background: var(--amber-soft);
+  color: var(--amber);
+  font-weight: 600;
+}
+
+.pane {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+/* .pane is display:flex — must re-hide explicitly, the [hidden] default loses */
+.pane[hidden] {
+  display: none;
+}
+
+/* ---- Go hero (reuses .hero/.hero__amount, adds unit + sub + dim) ---- */
+/* scoped compaction: the go pane needs the vertical budget the fee pane
+   spends on the chart; fee pane layout is untouched */
+#pane-go .hero {
+  padding: 4px 14px 6px;
+}
+
+#pane-go .hero__cost {
+  margin-bottom: 4px;
+}
+.hero__unit {
+  font-size: 13px;
+  color: var(--fg-3);
+  font-weight: 400;
+  margin-left: 4px;
+}
+
+#go-hero-sub {
+  font-family: var(--mono);
+  font-feature-settings: "tnum" 1;
+  font-size: 11px;
+  color: var(--fg-3);
+  display: block;
+}
+
+.go-hero--dim {
+  color: var(--fg-4);
+  text-shadow: none;
+}
+
+/* ---- quota section (server data, violet ladder) ------------ */
+.go-quota {
+  padding: 4px 14px 6px;
+  flex: 0 0 auto;
+  /* no border-top: the reused .hero already carries border-bottom */
+}
+
+.go-quota__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  font-size: 10px;
+  color: var(--fg-3);
+  letter-spacing: 0.14em;
+  margin-bottom: 4px;
+}
+
+.go-quota__src {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.04em;
+  color: var(--violet);
+}
+
+.go-quota__src--down {
+  color: var(--fg-4);
+}
+
+.go-qrow {
+  display: grid;
+  grid-template-columns: 40px 1fr 36px 62px;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 4px;
+  line-height: 1.2;
+}
+
+.go-qrow:last-child {
+  margin-bottom: 0;
+}
+
+/* display:grid beats the [hidden] default — S3/S4 collapse needs this */
+.go-qrow[hidden] {
+  display: none;
+}
+
+.go-qrow__n {
+  font-size: 10px;
+  color: var(--fg-2);
+  white-space: nowrap;
+}
+
+.go-qrow__bar {
+  position: relative;
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  overflow: hidden;
+}
+
+.go-qrow__fill {
+  display: block;
+  height: 100%;
+  width: 0;
+  min-width: 2px; /* 0% still renders a 2px sliver (设计 S7 边界) */
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--violet), #9f8cfa);
+  transition: width 320ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.go-qrow.warn .go-qrow__fill {
+  background: linear-gradient(90deg, var(--warn), var(--coral));
+}
+
+.go-qrow.hit .go-qrow__fill {
+  background: linear-gradient(90deg, var(--danger), #e04848);
+}
+
+.go-qrow__v {
+  font-family: var(--mono);
+  font-feature-settings: "tnum" 1;
+  font-size: 10.5px;
+  color: var(--violet);
+  text-align: right;
+}
+
+.go-qrow.warn .go-qrow__v {
+  color: var(--warn);
+}
+
+.go-qrow.hit .go-qrow__v {
+  color: var(--danger);
+}
+
+.go-qrow__r {
+  font-family: var(--mono);
+  font-size: 9px;
+  color: var(--fg-4);
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* S3/S4 degraded block (replaces the three bars inside .go-quota) */
+.go-qdown {
+  font-family: var(--mono);
+  font-size: 10px;
+  line-height: 1.6;
+  color: var(--fg-4);
+  padding: 4px 0 2px;
+  white-space: pre-line;
+}
+
+/* ---- skeleton shimmer (loading, S1) ------------------------ */
+.go-skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.08),
+    transparent
+  );
+  animation: go-pulse 1.4s infinite;
+}
+
+@keyframes go-pulse {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+
+/* ---- hit-rate double bars (amber = today, cyan = all-time) -- */
+.go-hits {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 4px 14px 6px;
+  border-top: 1px solid var(--border-soft);
+  flex: 0 0 auto;
+}
+
+.go-hit {
+  display: grid;
+  grid-template-columns: 92px 1fr 52px;
+  align-items: center;
+  gap: 8px;
+  line-height: 1.2;
+}
+
+.go-hit__n {
+  font-size: 10px;
+  color: var(--fg-3);
+  white-space: nowrap;
+}
+
+.go-hit__bar {
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  overflow: hidden;
+}
+
+.go-hit__fill {
+  display: block;
+  height: 100%;
+  width: 0;
+  border-radius: 999px;
+  transition: width 320ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.go-hit__v {
+  font-family: var(--mono);
+  font-feature-settings: "tnum" 1;
+  font-size: 11px;
+  text-align: right;
+}
+
+#go-hit-today .go-hit__fill {
+  background: linear-gradient(90deg, var(--amber), var(--coral));
+}
+
+#go-hit-today .go-hit__v {
+  color: var(--amber);
+}
+
+#go-hit-alltime .go-hit__fill {
+  background: linear-gradient(90deg, var(--cyan), #4aa8d8);
+}
+
+#go-hit-alltime .go-hit__v {
+  color: var(--cyan);
+}
+
+/* ---- week / all-time request rows --------------------------- */
+.go-rows {
+  display: flex;
+  flex-direction: column;
+  padding: 3px 14px 5px;
+  border-top: 1px solid var(--border-soft);
+  flex: 0 0 auto;
+}
+
+.go-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 2px 0;
+  line-height: 1.2;
+}
+
+.go-row__lbl {
+  font-size: 11px;
+  color: var(--fg-3);
+  letter-spacing: 0.14em;
+  flex: 0 0 auto;
+}
+
+.go-row__req {
+  font-family: var(--mono);
+  font-feature-settings: "tnum" 1;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--fg);
+}
+
+.go-row__req small {
+  font-size: 10px;
+  color: var(--fg-4);
+  font-weight: 400;
+  margin-left: 2px;
+}
+
+.go-row__meta {
+  margin-left: auto;
+  font-family: var(--mono);
+  font-feature-settings: "tnum" 1;
+  font-size: 10px;
+  color: var(--fg-3);
+}
+
+.go-row--strong {
+  border-top: 1px dashed var(--border-soft);
+}
+
+/* ---- model list --------------------------------------------- */
+.go-lists {
+  display: flex;
+  flex-direction: column;
+  padding: 4px 14px 3px;
+  border-top: 1px solid var(--border-soft);
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden; /* safety valve: clip the list, never the foot */
+}
+
+.go-list {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.go-list__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  font-size: 10px;
+  color: var(--fg-3);
+  letter-spacing: 0.06em;
+}
+
+.go-list__items {
+  list-style: none;
+  margin: 3px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.go-list__item {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11px;
+  line-height: 1.25;
+  padding: 1px 6px;
+  border-radius: var(--r-sm);
+  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid var(--border-soft);
+}
+
+.go-list__idx {
+  font-family: var(--mono);
+  font-size: 9px;
+  color: var(--fg-4);
+  font-feature-settings: "tnum" 1;
+}
+
+.go-list__nm {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--fg-2);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.go-list__rq {
+  margin-left: auto;
+  font-family: var(--mono);
+  font-feature-settings: "tnum" 1;
+  font-size: 10px;
+  color: var(--cyan);
+}
+
+.go-list__co {
+  font-family: var(--mono);
+  font-feature-settings: "tnum" 1;
+  font-size: 10px;
+  color: var(--amber);
+  width: 48px;
+  text-align: right;
+}
+
+.go-list__empty {
+  justify-content: center;
+  color: var(--fg-4);
+  font-size: 10.5px;
+  background: transparent;
+  border: 1px dashed var(--border-soft);
+}
+
+/* ---- footer -------------------------------------------------- */
+.go-foot {
+  display: flex;
+  justify-content: space-between;
+  margin-top: auto;
+  padding: 3px 14px 4px;
+  font-family: var(--mono);
+  font-size: 9.5px;
+  color: var(--fg-4);
+  flex: 0 0 auto;
+}
+
+/* ---- shared banner variants (S10) ---------------------------- */
+.banner.go-banner--danger {
+  background: rgba(255, 107, 107, 0.1);
+  border-color: rgba(255, 107, 107, 0.22);
+  color: var(--danger);
+}
+
+.banner.go-banner--danger .banner__dot {
+  background: var(--danger);
+  box-shadow: 0 0 6px rgba(255, 107, 107, 0.55);
+}
+
+.banner.go-banner--multi .banner__text {
+  white-space: pre-line;
+  line-height: 1.5;
+}
+
+/* ---- header dot state variants -------------------------------- */
+.brand__dot.go-dot--gray {
+  background: var(--fg-4);
+  box-shadow: none;
+  animation: none;
+}
+
+.brand__dot.go-dot--red {
+  background: var(--danger);
+  box-shadow: 0 0 8px rgba(255, 107, 107, 0.4);
+  animation: none;
+}
+
+/* ---- staggered reveal for go sections (reuses existing rise) --- */
+.go-quota,
+.go-hits,
+.go-rows,
+.go-lists,
+.go-foot {
+  opacity: 0;
+  transform: translateY(4px);
+  animation: rise 360ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.go-quota {
+  animation-delay: 120ms;
+}
+.go-hits {
+  animation-delay: 160ms;
+}
+.go-rows {
+  animation-delay: 200ms;
+}
+.go-lists {
+  animation-delay: 240ms;
+}
+.go-foot {
+  animation-delay: 280ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .go-quota,
+  .go-hits,
+  .go-rows,
+  .go-lists,
+  .go-foot {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+  .go-skeleton::after {
+    animation: none;
+  }
+}
