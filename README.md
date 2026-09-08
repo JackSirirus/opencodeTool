@@ -17,6 +17,11 @@ npm run usage
 
 # 等价于
 node bin/opencode-usage.js
+
+# 启动桌面悬浮窗（右下角常驻，置顶显示用量）
+npm run widget
+
+# 开机自动启动：Win+R 输入 shell:startup，把本项目的 widget 启动快捷方式放进去
 ```
 
 无需 `npm install`：数据层与 CLI 完全零依赖。
@@ -140,6 +145,14 @@ npm run usage -- go                        # 等价写法
   - `model` 列为 JSON 字符串（`{"id","providerID","variant"}`），解析失败或为 NULL 时归入 `unknown / unknown`
   - 项目名：`project.name` 优先，否则取 `worktree` 的 basename；`project_id = 'global'` 显示为 `global`；项目行缺失显示为 `unknown`
 - 首次运行前需至少启动过一次 OpenCode，数据库才会生成
+
+## 调试 / 自检
+
+```powershell
+npm test                                        # 全部测试（数据层 + 额度 fetcher + 渲染）
+npx electron src/widget/main.js --selftest      # 无窗口自检：输出 SELFTEST OK 后自动退出
+$env:WIDGET_DEVTOOLS="1"; npm run widget        # 打开小窗 DevTools 调试
+```
 
 ## 测试
 
