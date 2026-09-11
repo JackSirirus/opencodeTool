@@ -1,0 +1,739 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>opencodeTool · 紧凑模式 设计稿 v0.3</title>
+<style>
+  /* ============================================================
+   * tokens: 与 src/widget/styles.css 完全一致
+   * ============================================================ */
+  :root {
+    --bg-0:#0a0d12; --bg-1:#0f141b; --bg-2:#161d27; --bg-3:#1d2532;
+    --border:rgba(255,255,255,0.08); --border-strong:rgba(255,255,255,0.16); --border-soft:rgba(255,255,255,0.04);
+    --fg:rgba(255,255,255,0.94); --fg-2:rgba(255,255,255,0.62); --fg-3:rgba(255,255,255,0.38); --fg-4:rgba(255,255,255,0.22);
+    --amber:#f5b942; --amber-soft:rgba(245,185,66,0.18); --amber-glow:rgba(245,185,66,0.35);
+    --coral:#ff8a3d; --cyan:#7ed3ff; --cyan-soft:rgba(126,211,255,0.16);
+    --violet:#c4b5fd; --violet-soft:rgba(196,181,253,0.16);
+    --danger:#ff6b6b; --danger-soft:rgba(255,107,107,0.16); --warn:#fbbf24;
+    --mono:"Cascadia Mono","JetBrains Mono","Cascadia Code","Consolas","SFMono-Regular",ui-monospace,monospace;
+    --ui:"Segoe UI Variable","Segoe UI","PingFang SC","Microsoft YaHei UI",system-ui,-apple-system,sans-serif;
+    --r-sm:6px; --r-md:10px; --r-lg:14px;
+  }
+  * { box-sizing:border-box; }
+  html, body { margin:0; padding:0; }
+  body {
+    background:#0b0e13;
+    background-image:
+      radial-gradient(1100px 560px at 84% -8%, rgba(245,185,66,0.05), transparent),
+      radial-gradient(900px 480px at 4% 108%, rgba(126,211,255,0.04), transparent);
+    background-attachment:fixed;
+    color:var(--fg); font-family:var(--ui); font-size:13px; line-height:1.55;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  /* ============================================================
+   * page chrome (仅设计稿页面用，不属于窗口)
+   * ============================================================ */
+  .page { max-width:1160px; margin:0 auto; padding:48px 28px 96px; }
+  .ptop { margin-bottom:8px; }
+  .ptop__row { display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+  .ptop h1 { font-size:22px; margin:0; letter-spacing:-0.01em; font-weight:650; }
+  .vpill { font-family:var(--mono); font-size:11px; color:var(--amber);
+           background:var(--amber-soft); border:1px solid rgba(245,185,66,0.28);
+           padding:2px 9px; border-radius:999px; }
+  .datepill { font-family:var(--mono); font-size:11px; color:var(--fg-3);
+              border:1px solid var(--border); padding:2px 9px; border-radius:999px; }
+  .ptop__meta { color:var(--fg-3); font-size:12px; margin:10px 0 0; }
+  .ptop__meta code { font-family:var(--mono); color:var(--fg-2); font-size:11.5px; }
+  .ptop__note { color:var(--fg-2); font-size:12.5px; line-height:1.75;
+                margin:14px 0 0; padding:12px 16px;
+                border-left:2px solid rgba(245,185,66,0.42);
+                background:rgba(245,185,66,0.035);
+                border-radius:0 var(--r-sm) var(--r-sm) 0; }
+  .ptop__note b { color:var(--fg); }
+
+  /* ============================================================
+   * gallery of mockups
+   * ============================================================ */
+  .gallery { display:grid; grid-template-columns:repeat(2,minmax(0,1fr));
+             gap:60px 64px; margin-top:46px; }
+  .shot { display:flex; flex-direction:column; min-width:0; }
+  .shot__head { display:flex; align-items:center; justify-content:space-between;
+                gap:10px; padding-bottom:9px; border-bottom:1px solid var(--border-soft);
+                margin-bottom:30px; }
+  .shot__title { font-size:14px; font-weight:650; color:var(--fg); }
+  .size { font-family:var(--mono); font-size:11px; color:var(--fg-3); letter-spacing:0.02em; }
+  .size--compact { color:var(--violet); }
+
+  .mock { position:relative; width:300px; padding-top:34px; }
+  .pin { position:absolute; top:0; display:inline-flex; align-items:center; gap:5px;
+         padding:3px 9px; border-radius:999px; font-size:11px; line-height:1.4;
+         white-space:nowrap; background:rgba(245,185,66,0.14);
+         border:1px solid rgba(245,185,66,0.5); color:var(--amber);
+         box-shadow:0 0 0 3px rgba(245,185,66,0.06); font-family:var(--ui); }
+  .pin::after { content:""; position:absolute; left:50%; bottom:-5px;
+                width:8px; height:8px; transform:translateX(-50%) rotate(45deg);
+                background:rgba(245,185,66,0.14);
+                border-right:1px solid rgba(245,185,66,0.5);
+                border-bottom:1px solid rgba(245,185,66,0.5); }
+  .pin--btn   { right:77px; transform:translateX(50%); }
+  .pin--btn-c { right:75px; transform:translateX(50%); }
+  .pin--gray  { background:rgba(255,255,255,0.05); border-color:var(--border-strong);
+                color:var(--fg-2); box-shadow:none; }
+  .pin--gray::after { background:rgba(255,255,255,0.05); border-color:var(--border-strong); }
+  .pin .k { font-family:var(--mono); color:var(--fg); }
+
+  .notes { font-size:12.5px; color:var(--fg-2); line-height:1.7; margin:18px 0 0; padding:0; }
+  .notes ul { margin:0; padding-left:18px; }
+  .notes li { margin:6px 0; }
+  .notes .k { font-family:var(--mono); color:var(--amber); font-size:11.5px; }
+  .notes .kc { font-family:var(--mono); color:var(--cyan); font-size:11.5px; }
+  .notes .kv { font-family:var(--mono); color:var(--violet); font-size:11.5px; }
+  .tag { display:inline-block; font-size:11px; padding:2px 8px; border-radius:99px;
+         background:var(--amber-soft); color:var(--amber); margin-right:6px; vertical-align:1px; }
+  .tag.c { background:var(--cyan-soft); color:var(--cyan); }
+  .tag.v { background:var(--violet-soft); color:var(--violet); }
+
+  /* ============================================================
+   * WIDGET — 1:1 复刻 src/widget/styles.css
+   * ============================================================ */
+  .widget { position:relative; width:300px; padding:4px; user-select:none; }
+  .widget--full { height:400px; }
+  .widget--compact { height:120px; }
+
+  .widget .card {
+    position:relative; width:100%; height:100%; display:flex; flex-direction:column;
+    border-radius:var(--r-lg);
+    background:
+      radial-gradient(140% 90% at 100% 0%, rgba(245,185,66,0.06), transparent 55%),
+      radial-gradient(120% 80% at 0% 100%, rgba(126,211,255,0.05), transparent 60%),
+      linear-gradient(160deg,#161d27 0%,#0f141b 60%,#0a0d12 100%);
+    border:1px solid rgba(255,255,255,0.08);
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,0.06),
+      0 10px 30px rgba(0,0,0,0.45);
+    overflow:hidden;
+  }
+  .widget .card::before {
+    content:""; position:absolute; inset:0; pointer-events:none; border-radius:inherit;
+    background:repeating-linear-gradient(0deg,
+      rgba(255,255,255,0.012) 0, rgba(255,255,255,0.012) 1px, transparent 1px, transparent 3px);
+    mix-blend-mode:overlay; opacity:0.6;
+  }
+
+  /* ---- header ---- */
+  .c-head { display:flex; align-items:center; justify-content:space-between; gap:6px;
+            padding:8px 8px 8px 12px; border-bottom:1px solid var(--border-soft);
+            flex:0 0 auto; position:relative; z-index:1; }
+  .c-head--compact { padding:7px 8px 7px 12px; gap:8px; }
+  .brand { display:flex; align-items:center; gap:6px; font-weight:500;
+           letter-spacing:0.02em; min-width:0; }
+  .c-head--compact .brand { gap:6px; }
+  .brand__dot { width:8px; height:8px; border-radius:50%; background:var(--amber);
+                box-shadow:0 0 0 3px var(--amber-soft), 0 0 8px var(--amber-glow);
+                animation:pulse 2.4s ease-in-out infinite; flex:0 0 auto; }
+  .c-head--compact .brand__dot { width:7px; height:7px; }
+  .brand__dot.is-gray { background:var(--fg-4); box-shadow:none; animation:none; }
+  .brand__dot.is-red  { background:var(--danger); box-shadow:0 0 8px rgba(255,107,107,0.4); animation:none; }
+  @keyframes pulse {
+    0%,100% { box-shadow:0 0 0 3px var(--amber-soft), 0 0 8px var(--amber-glow); }
+    50%     { box-shadow:0 0 0 5px rgba(245,185,66,0.08), 0 0 12px var(--amber-glow); }
+  }
+  .brand__title { font-size:12px; color:var(--fg); font-weight:600; white-space:nowrap; }
+  .brand__sub { font-size:11px; color:var(--fg-3); font-weight:400;
+                letter-spacing:0.18em; text-transform:uppercase; white-space:nowrap; }
+  .c-tag { display:none; }
+
+  .tabs { display:flex; align-items:center; background:#0a0d12; border:1px solid var(--border-soft);
+          border-radius:999px; padding:2px; flex:0 0 auto; }
+  .tab { appearance:none; border:none; background:transparent; font-family:var(--ui);
+         font-size:10px; line-height:1; padding:3px 9px; border-radius:999px;
+         color:var(--fg-3); cursor:pointer; transition:background 120ms ease,color 120ms ease; }
+  .tab:hover { color:var(--fg-2); }
+  .tab.on { background:var(--amber-soft); color:var(--amber); font-weight:600; }
+  .c-head--compact .tab { padding:3px 8px; }
+
+  .actions { display:flex; align-items:center; gap:4px; flex:0 0 auto; }
+  .iconbtn { appearance:none; border:1px solid var(--border); background:rgba(255,255,255,0.02);
+             color:var(--fg-2); width:22px; height:22px; border-radius:var(--r-sm);
+             display:inline-flex; align-items:center; justify-content:center; cursor:pointer;
+             transition:background 120ms ease,border-color 120ms ease,color 120ms ease,transform 120ms ease; }
+  .iconbtn:hover { background:rgba(255,255,255,0.06); border-color:var(--border-strong); color:var(--fg); }
+  .iconbtn:active { transform:scale(0.94); }
+  .iconbtn svg { width:12px; height:12px; fill:currentColor; }
+  .iconbtn--stroke svg { fill:none; stroke:currentColor; stroke-width:1.6;
+                         stroke-linecap:round; stroke-linejoin:round; }
+  .iconbtn--danger:hover { background:var(--danger-soft); border-color:rgba(255,107,107,0.32); color:var(--danger); }
+  .iconbtn--rotate svg { transition:transform 400ms ease; }
+  .iconbtn--new { border-color:rgba(245,185,66,0.5); color:var(--amber);
+                  box-shadow:0 0 0 3px rgba(245,185,66,0.08); }
+
+  /* ---- panes ---- */
+  .pane { display:flex; flex-direction:column; flex:1 1 auto; min-height:0; }
+
+  /* ---- hero ---- */
+  .hero { padding:10px 14px 8px; border-bottom:1px solid var(--border-soft); flex:0 0 auto; }
+  .pane--go .hero { padding:4px 14px 6px; }
+  .pane--go .hero__cost { margin-bottom:4px; }
+  .hero__row { display:flex; align-items:baseline; justify-content:space-between; }
+  .hero__label { font-size:10px; letter-spacing:0.22em; text-transform:uppercase;
+                 color:var(--fg-3); font-weight:500; }
+  .hero__hint { font-family:var(--mono); font-size:10px; color:var(--fg-4); }
+  .hero__cost { display:flex; align-items:baseline; margin-top:2px; margin-bottom:6px;
+                font-family:var(--mono); line-height:1; }
+  .hero__currency { font-size:15px; color:var(--amber); margin-right:2px; font-weight:500;
+                    opacity:0.9; transform:translateY(-2px); }
+  .hero__amount { font-size:28px; font-weight:600; color:var(--amber);
+                  letter-spacing:-0.02em; text-shadow:0 0 18px rgba(245,185,66,0.28); }
+  .hero__unit { font-size:13px; color:var(--fg-3); font-weight:400; margin-left:4px; }
+  .hero__sub { display:flex; flex-wrap:wrap; gap:6px; }
+  .go-hero-sub { display:block; font-family:var(--mono); font-size:11px; color:var(--fg-3); }
+  .chip { display:inline-flex; align-items:center; gap:5px; padding:3px 7px 3px 8px;
+          border-radius:999px; background:rgba(255,255,255,0.03); border:1px solid var(--border);
+          font-size:11px; color:var(--fg-2); }
+  .chip__k { color:var(--fg-3); letter-spacing:0.06em; }
+  .chip__v { font-family:var(--mono); color:var(--fg); font-weight:500; }
+  .chip--alt { background:var(--cyan-soft); border-color:rgba(126,211,255,0.18); }
+  .chip--ghost { background:transparent; border-color:var(--border); }
+
+  /* ---- week / all-time rows ---- */
+  .rows { padding:6px 14px; display:flex; flex-direction:column; gap:2px;
+          border-bottom:1px solid var(--border-soft); flex:0 0 auto; }
+  .row { display:grid; grid-template-columns:36px 1fr auto; align-items:baseline; gap:8px; padding:2px 0; }
+  .row__label { font-size:11px; color:var(--fg-3); letter-spacing:0.14em; }
+  .row__cost { font-family:var(--mono); font-size:14px; color:var(--fg); font-weight:500; letter-spacing:-0.01em; }
+  .row--strong .row__cost { font-size:15px; color:var(--amber); }
+  .row__meta { font-family:var(--mono); font-size:10px; color:var(--fg-3); }
+
+  /* ---- chart ---- */
+  .chart { padding:8px 14px 16px; border-bottom:1px solid var(--border-soft); flex:0 0 auto; }
+  .chart__head { display:flex; align-items:baseline; justify-content:space-between; margin-bottom:4px; }
+  .chart__title { font-size:10px; letter-spacing:0.22em; text-transform:uppercase; color:var(--fg-3); font-weight:500; }
+  .chart__hint { font-family:var(--mono); font-size:10px; color:var(--fg-3); }
+  .chart__body { display:grid; grid-template-columns:repeat(7,1fr); gap:4px; align-items:end; height:44px; }
+  .bar { position:relative; display:flex; flex-direction:column; align-items:center; justify-content:flex-end;
+         height:100%; border-radius:3px; background:linear-gradient(180deg,var(--amber) 0%,var(--coral) 100%);
+         min-height:2px; box-shadow:inset 0 1px 0 rgba(255,255,255,0.18), 0 0 0 1px rgba(255,255,255,0.04); }
+  .bar--today::after { content:""; position:absolute; inset:-3px -2px auto -2px; height:3px;
+                       border-radius:3px; background:var(--amber); box-shadow:0 0 6px var(--amber-glow); }
+  .bar__day { position:absolute; bottom:-14px; font-family:var(--mono); font-size:9px; color:var(--fg-3); }
+  .bar--today .bar__day { color:var(--amber); }
+
+  /* ---- fee lists ---- */
+  .lists { padding:10px 10px 8px; display:grid; grid-template-columns:1fr 1fr; gap:6px;
+           flex:1 1 auto; min-height:0; }
+  .list { display:flex; flex-direction:column; min-height:0; background:rgba(255,255,255,0.015);
+          border:1px solid var(--border-soft); border-radius:var(--r-md); padding:6px 7px 5px; }
+  .list__head { display:flex; align-items:baseline; justify-content:space-between;
+                padding:0 1px 4px; border-bottom:1px dashed var(--border-soft); }
+  .list__title { font-size:10px; letter-spacing:0.22em; text-transform:uppercase;
+                 color:var(--cyan); font-weight:500; }
+  .list:nth-child(2) .list__title { color:var(--violet); }
+  .list__hint { font-family:var(--mono); font-size:9px; color:var(--fg-4); letter-spacing:0.04em; }
+  .list__items { list-style:none; margin:4px 0 0; padding:0; display:flex; flex-direction:column; gap:1px; }
+  .list__item { display:grid; grid-template-columns:12px 1fr auto; align-items:center; gap:5px;
+                padding:2px; border-radius:4px; font-size:11px; color:var(--fg-2); }
+  .list__idx { font-family:var(--mono); font-size:9px; color:var(--fg-4); text-align:right; }
+  .list__name { overflow:hidden; white-space:nowrap; text-overflow:ellipsis; color:var(--fg); }
+  .list__cost { font-family:var(--mono); font-size:10px; color:var(--fg-2); }
+
+  /* ---- Go: quota ---- */
+  .go-quota { padding:4px 14px 6px; flex:0 0 auto; }
+  .go-quota__head { display:flex; align-items:baseline; justify-content:space-between;
+                    font-size:10px; color:var(--fg-3); letter-spacing:0.14em; margin-bottom:4px; }
+  .go-quota__src { font-family:var(--mono); font-size:9px; letter-spacing:0.04em; color:var(--violet); }
+  .go-qrow { display:grid; grid-template-columns:40px 1fr 36px 62px; align-items:center;
+             gap:7px; margin-bottom:4px; }
+  .go-qrow:last-child { margin-bottom:0; }
+  .go-qrow__n { font-size:10px; color:var(--fg-2); white-space:nowrap; }
+  .go-qrow__bar { position:relative; height:4px; border-radius:999px; background:rgba(255,255,255,0.06); overflow:hidden; }
+  .go-qrow__fill { display:block; height:100%; border-radius:999px;
+                   background:linear-gradient(90deg,var(--violet),#9f8cfa); }
+  .go-qrow.warn .go-qrow__fill { background:linear-gradient(90deg,var(--warn),var(--coral)); }
+  .go-qrow.hit  .go-qrow__fill { background:linear-gradient(90deg,var(--danger),#e04848); }
+  .go-qrow__v { font-family:var(--mono); font-size:10.5px; color:var(--violet); text-align:right; }
+  .go-qrow.warn .go-qrow__v { color:var(--warn); }
+  .go-qrow.hit  .go-qrow__v { color:var(--danger); }
+  .go-qrow__r { font-family:var(--mono); font-size:9px; color:var(--fg-4); text-align:right; white-space:nowrap; }
+
+  /* ---- Go: hit rate ---- */
+  .go-hits { display:flex; flex-direction:column; gap:5px; padding:4px 14px 6px;
+             border-top:1px solid var(--border-soft); flex:0 0 auto; }
+  .go-hit { display:grid; grid-template-columns:92px 1fr 52px; align-items:center; gap:8px; }
+  .go-hit__n { font-size:10px; color:var(--fg-3); white-space:nowrap; }
+  .go-hit__bar { height:4px; border-radius:999px; background:rgba(255,255,255,0.06); overflow:hidden; }
+  .go-hit__fill { display:block; height:100%; border-radius:999px; }
+  .go-hit__v { font-family:var(--mono); font-size:11px; text-align:right; }
+  .go-hit.a .go-hit__fill { background:linear-gradient(90deg,var(--amber),var(--coral)); }
+  .go-hit.a .go-hit__v { color:var(--amber); }
+  .go-hit.c .go-hit__fill { background:linear-gradient(90deg,var(--cyan),#4aa8d8); }
+  .go-hit.c .go-hit__v { color:var(--cyan); }
+
+  /* ---- Go: week / all-time ---- */
+  .go-rows { display:flex; flex-direction:column; padding:3px 14px 5px;
+             border-top:1px solid var(--border-soft); flex:0 0 auto; }
+  .go-row { display:flex; align-items:baseline; gap:8px; padding:2px 0; }
+  .go-row__lbl { font-size:11px; color:var(--fg-3); letter-spacing:0.14em; }
+  .go-row__req { font-family:var(--mono); font-size:13px; font-weight:600; color:var(--fg); }
+  .go-row__req small { font-size:10px; color:var(--fg-4); font-weight:400; margin-left:2px; }
+  .go-row__meta { margin-left:auto; font-family:var(--mono); font-size:10px; color:var(--fg-3); }
+  .go-row--strong { border-top:1px dashed var(--border-soft); }
+
+  /* ---- Go: model list ---- */
+  .go-lists { display:flex; flex-direction:column; padding:4px 14px 3px;
+              border-top:1px solid var(--border-soft); flex:1 1 auto; min-height:0; overflow:hidden; }
+  .go-list__head { display:flex; align-items:baseline; justify-content:space-between;
+                   font-size:10px; color:var(--fg-3); letter-spacing:0.06em; }
+  .go-list__items { list-style:none; margin:3px 0 0; padding:0; display:flex; flex-direction:column; gap:2px; }
+  .go-list__item { display:flex; align-items:center; gap:7px; font-size:11px; line-height:1.25;
+                   padding:1px 6px; border-radius:var(--r-sm); background:rgba(255,255,255,0.025);
+                   border:1px solid var(--border-soft); }
+  .go-list__idx { font-family:var(--mono); font-size:9px; color:var(--fg-4); }
+  .go-list__nm { font-family:var(--mono); font-size:10px; color:var(--fg-2); overflow:hidden;
+                 white-space:nowrap; text-overflow:ellipsis; }
+  .go-list__rq { margin-left:auto; font-family:var(--mono); font-size:10px; color:var(--cyan); }
+  .go-list__co { font-family:var(--mono); font-size:10px; color:var(--amber); width:48px; text-align:right; }
+  .go-foot { display:flex; justify-content:space-between; margin-top:auto; padding:3px 14px 4px;
+             font-family:var(--mono); font-size:9.5px; color:var(--fg-4); flex:0 0 auto; }
+
+  /* ---- COMPACT (layout A) ---- */
+  .c-fee-rows { flex:1 1 auto; display:flex; flex-direction:column; min-height:0;
+                padding:5px 14px 6px; }
+  .c-fee-row { flex:1 1 0; display:flex; align-items:center; justify-content:space-between;
+               gap:8px; min-height:0; }
+  .c-fee-row__k { font-size:11px; color:var(--fg-3); letter-spacing:0.14em; }
+  .c-fee-row__v { font-family:var(--mono); font-feature-settings:"tnum" 1;
+                  font-size:14px; color:var(--fg); font-weight:500; letter-spacing:-0.01em; }
+  .c-fee-row--strong .c-fee-row__v { color:var(--amber); font-size:15px; }
+
+  .c-go-rows { flex:1 1 auto; display:flex; flex-direction:column; min-height:0;
+               padding:5px 14px 6px; }
+  .c-go-row { flex:1 1 0; display:grid; grid-template-columns:34px 1fr 40px 64px;
+              gap:6px; align-items:center; min-height:0; }
+  .c-go-row__n { font-size:10px; color:var(--fg-2); white-space:nowrap; }
+  .c-go-row__bar { position:relative; height:4px; border-radius:999px;
+                   background:rgba(255,255,255,0.06); overflow:hidden; }
+  .c-go-row__fill { display:block; height:100%; border-radius:999px; width:0;
+                    background:linear-gradient(90deg,var(--violet),#9f8cfa); }
+  .c-go-row__v { font-family:var(--mono); font-feature-settings:"tnum" 1; font-size:10.5px;
+                 color:var(--violet); text-align:right; }
+  .c-go-row__r { font-family:var(--mono); font-size:9px; color:var(--fg-4);
+                 text-align:right; white-space:nowrap; }
+  .c-go-row.hit .c-go-row__fill { background:linear-gradient(90deg,var(--danger),#e04848); }
+  .c-go-row.hit .c-go-row__v { color:var(--danger); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .brand__dot { animation:none; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header class="ptop">
+    <div class="ptop__row">
+      <h1>OpenCode 用量小窗口 · 紧凑模式 设计稿</h1>
+      <span class="vpill">v0.3</span>
+      <span class="datepill">2026-09-11</span>
+    </div>
+    <p class="ptop__meta">
+      视觉沿用 <code>src/widget/styles.css</code> 暗色玻璃 tokens，无新设计规范 ·
+      窗口完整态 <code>300 × 400</code> / 紧凑态 <code>300 × 120</code> ·
+      顶栏新增 <code>⤡ / ⤢</code> 切换按钮（刷新左侧）
+    </p>
+    <p class="ptop__note">
+      <b>用法</b>：本页为静态视觉设计稿（零外部依赖，双击即可打开）。四张卡片 1:1 复刻真实小窗口；
+      琥珀色标注为本次新增 / 变更点。切换按钮是<b>同一个按钮</b>，图标随状态变化：
+      完整态显示 <b>⤡</b>（缩小），紧凑态显示 <b>⤢</b>（放大）。紧凑态两种视图尺寸一致，
+      切换费用 / Go 时窗口不抖动。
+    </p>
+  </header>
+
+  <div class="gallery">
+
+    <!-- ① 完整态 · 费用 -->
+    <figure class="shot">
+      <div class="shot__head">
+        <span class="shot__title">① 完整态 · 费用</span>
+        <span class="size">300 × 400</span>
+      </div>
+      <div class="mock">
+        <span class="pin pin--btn">新增 <span class="k">⤡</span> 缩小</span>
+        <div class="widget widget--full">
+          <div class="card">
+            <header class="c-head">
+              <div class="brand">
+                <span class="brand__dot"></span>
+                <span class="brand__title">OpenCode</span>
+                <span class="brand__sub">用量</span>
+              </div>
+              <span class="tabs">
+                <button class="tab on" type="button">费用</button>
+                <button class="tab" type="button">Go</button>
+              </span>
+              <div class="actions">
+                <button class="iconbtn iconbtn--stroke iconbtn--new" type="button" title="缩小">
+                  <svg viewBox="0 0 16 16"><path d="M4 6.5 8 10.5 12 6.5"/></svg>
+                </button>
+                <button class="iconbtn iconbtn--rotate" type="button" title="刷新">
+                  <svg viewBox="0 0 16 16"><path d="M8 2.5a5.5 5.5 0 0 1 4.85 2.92l-1.18.55A4.2 4.2 0 0 0 8 3.8a4.2 4.2 0 1 0 3.99 5.55h1.3A5.5 5.5 0 1 1 8 2.5Zm.65-1.85v3.4H5.25l1.2-1.2A5.48 5.48 0 0 1 8.65.65Z"/></svg>
+                </button>
+                <button class="iconbtn iconbtn--danger" type="button" title="关闭">
+                  <svg viewBox="0 0 16 16"><path d="M3.72 3.72a.75.75 0 0 1 1.06 0L8 6.94l3.22-3.22a.75.75 0 1 1 1.06 1.06L9.06 8l3.22 3.22a.75.75 0 1 1-1.06 1.06L8 9.06l-3.22 3.22a.75.75 0 0 1-1.06-1.06L6.94 8 3.72 4.78a.75.75 0 0 1 0-1.06Z"/></svg>
+                </button>
+              </div>
+            </header>
+
+            <div class="pane pane--fee">
+              <section class="hero">
+                <div class="hero__row">
+                  <span class="hero__label">今日</span>
+                  <span class="hero__hint">14:32</span>
+                </div>
+                <div class="hero__cost">
+                  <span class="hero__currency">$</span>
+                  <span class="hero__amount">1.23</span>
+                </div>
+                <div class="hero__sub">
+                  <span class="chip"><span class="chip__k">输入</span><span class="chip__v">1.2M</span></span>
+                  <span class="chip chip--alt"><span class="chip__k">输出</span><span class="chip__v">340k</span></span>
+                  <span class="chip chip--ghost"><span class="chip__k">会话</span><span class="chip__v">12</span></span>
+                </div>
+              </section>
+
+              <section class="rows">
+                <div class="row">
+                  <span class="row__label">本周</span>
+                  <span class="row__cost">$8.45</span>
+                  <span class="row__meta">8.4M in · 41 会话</span>
+                </div>
+                <div class="row row--strong">
+                  <span class="row__label">累计</span>
+                  <span class="row__cost">$167.54</span>
+                  <span class="row__meta">1.6B in · 619 会话</span>
+                </div>
+              </section>
+
+              <section class="chart">
+                <div class="chart__head">
+                  <span class="chart__title">近 7 日</span>
+                  <span class="chart__hint">合计 $8.45</span>
+                </div>
+                <div class="chart__body">
+                  <div class="bar" style="height:44%"><span class="bar__day">Sat</span></div>
+                  <div class="bar" style="height:21%"><span class="bar__day">Sun</span></div>
+                  <div class="bar" style="height:78%"><span class="bar__day">Mon</span></div>
+                  <div class="bar" style="height:100%"><span class="bar__day">Tue</span></div>
+                  <div class="bar" style="height:56%"><span class="bar__day">Wed</span></div>
+                  <div class="bar" style="height:65%"><span class="bar__day">Thu</span></div>
+                  <div class="bar bar--today" style="height:62%"><span class="bar__day">Fri</span></div>
+                </div>
+              </section>
+
+              <section class="lists">
+                <div class="list">
+                  <div class="list__head">
+                    <span class="list__title">模型</span>
+                    <span class="list__hint">Top 3</span>
+                  </div>
+                  <ol class="list__items">
+                    <li class="list__item"><span class="list__idx">01</span><span class="list__name">deepseek-v4-flash · opencode-go</span><span class="list__cost">$12.30</span></li>
+                    <li class="list__item"><span class="list__idx">02</span><span class="list__name">claude-sonnet-4.5 · anthropic</span><span class="list__cost">$8.10</span></li>
+                    <li class="list__item"><span class="list__idx">03</span><span class="list__name">gpt-5 · openai</span><span class="list__cost">$4.20</span></li>
+                  </ol>
+                </div>
+                <div class="list">
+                  <div class="list__head">
+                    <span class="list__title">项目</span>
+                    <span class="list__hint">Top 3</span>
+                  </div>
+                  <ol class="list__items">
+                    <li class="list__item"><span class="list__idx">01</span><span class="list__name">opencodeTool</span><span class="list__cost">$20.10</span></li>
+                    <li class="list__item"><span class="list__idx">02</span><span class="list__name">webapp</span><span class="list__cost">$9.80</span></li>
+                    <li class="list__item"><span class="list__idx">03</span><span class="list__name">scripts</span><span class="list__cost">$4.30</span></li>
+                  </ol>
+                </div>
+              </section>
+            </div>
+          </div>
+        </div>
+      </div>
+      <figcaption class="notes">
+        <span class="tag">新增按钮</span><span class="tag c">真实数据</span>
+        <ul>
+          <li>顶栏 <span class="k">.actions</span> 变为三个按钮，顺序 <span class="k">[⤡] [↻] [✕]</span>：
+              新增缩小按钮位于刷新<b>左侧</b>。</li>
+          <li>缩小按钮为描边 SVG（<span class="k">fill:none; stroke:currentColor</span>），
+              图标 = chevron-down <span class="k">M4 6.5 8 10.5 12 6.5</span>，标题「缩小」。
+              琥珀描边 = 本次新增，非最终态样式。</li>
+          <li>窗口尺寸保持 <span class="k">300 × 400</span>；其余区块（hero / 本周累计 / 近 7 日 / 模型·项目 Top3）与现状一致。</li>
+          <li>点击后 → 紧凑态 <span class="k">300 × 120</span>，锚定右下角（左 / 上边缘内收），tab 状态共享。</li>
+        </ul>
+      </figcaption>
+    </figure>
+
+    <!-- ② 完整态 · Go -->
+    <figure class="shot">
+      <div class="shot__head">
+        <span class="shot__title">② 完整态 · Go</span>
+        <span class="size">300 × 400</span>
+      </div>
+      <div class="mock">
+        <span class="pin pin--btn">新增 <span class="k">⤡</span> 缩小</span>
+        <div class="widget widget--full">
+          <div class="card">
+            <header class="c-head">
+              <div class="brand">
+                <span class="brand__dot"></span>
+                <span class="brand__title">OpenCode</span>
+                <span class="brand__sub">用量</span>
+              </div>
+              <span class="tabs">
+                <button class="tab" type="button">费用</button>
+                <button class="tab on" type="button">Go</button>
+              </span>
+              <div class="actions">
+                <button class="iconbtn iconbtn--stroke iconbtn--new" type="button" title="缩小">
+                  <svg viewBox="0 0 16 16"><path d="M4 6.5 8 10.5 12 6.5"/></svg>
+                </button>
+                <button class="iconbtn iconbtn--rotate" type="button" title="刷新">
+                  <svg viewBox="0 0 16 16"><path d="M8 2.5a5.5 5.5 0 0 1 4.85 2.92l-1.18.55A4.2 4.2 0 0 0 8 3.8a4.2 4.2 0 1 0 3.99 5.55h1.3A5.5 5.5 0 1 1 8 2.5Zm.65-1.85v3.4H5.25l1.2-1.2A5.48 5.48 0 0 1 8.65.65Z"/></svg>
+                </button>
+                <button class="iconbtn iconbtn--danger" type="button" title="关闭">
+                  <svg viewBox="0 0 16 16"><path d="M3.72 3.72a.75.75 0 0 1 1.06 0L8 6.94l3.22-3.22a.75.75 0 1 1 1.06 1.06L9.06 8l3.22 3.22a.75.75 0 1 1-1.06 1.06L8 9.06l-3.22 3.22a.75.75 0 0 1-1.06-1.06L6.94 8 3.72 4.78a.75.75 0 0 1 0-1.06Z"/></svg>
+                </button>
+              </div>
+            </header>
+
+            <div class="pane pane--go">
+              <section class="hero">
+                <div class="hero__row">
+                  <span class="hero__label">今日请求</span>
+                  <span class="hero__hint">14:32</span>
+                </div>
+                <div class="hero__cost">
+                  <span class="hero__amount">157</span>
+                  <span class="hero__unit">次</span>
+                </div>
+                <div class="hero__sub">
+                  <span class="go-hero-sub">30.0M tok · $1.44 · 14:32</span>
+                </div>
+              </section>
+
+              <section class="go-quota">
+                <div class="go-quota__head">
+                  <span>套餐额度</span>
+                  <span class="go-quota__src">server</span>
+                </div>
+                <div class="go-qrow">
+                  <span class="go-qrow__n">5小时</span>
+                  <span class="go-qrow__bar"><span class="go-qrow__fill" style="width:42%"></span></span>
+                  <span class="go-qrow__v">42%</span>
+                  <span class="go-qrow__r">2h11m 后重置</span>
+                </div>
+                <div class="go-qrow">
+                  <span class="go-qrow__n">本周</span>
+                  <span class="go-qrow__bar"><span class="go-qrow__fill" style="width:18%"></span></span>
+                  <span class="go-qrow__v">18%</span>
+                  <span class="go-qrow__r">09-14 重置</span>
+                </div>
+                <div class="go-qrow warn">
+                  <span class="go-qrow__n">本月</span>
+                  <span class="go-qrow__bar"><span class="go-qrow__fill" style="width:63%"></span></span>
+                  <span class="go-qrow__v">63%</span>
+                  <span class="go-qrow__r">10-01 重置</span>
+                </div>
+              </section>
+
+              <section class="go-hits">
+                <div class="go-hit a">
+                  <span class="go-hit__n">缓存命中·今日</span>
+                  <span class="go-hit__bar"><span class="go-hit__fill" style="width:89.4%"></span></span>
+                  <span class="go-hit__v">89.4%</span>
+                </div>
+                <div class="go-hit c">
+                  <span class="go-hit__n">缓存命中·累计</span>
+                  <span class="go-hit__bar"><span class="go-hit__fill" style="width:90.1%"></span></span>
+                  <span class="go-hit__v">90.1%</span>
+                </div>
+              </section>
+
+              <section class="go-rows">
+                <div class="go-row">
+                  <span class="go-row__lbl">本周</span>
+                  <span class="go-row__req">1,558<small>次</small></span>
+                  <span class="go-row__meta">331.3M tok · $13.25</span>
+                </div>
+                <div class="go-row go-row--strong">
+                  <span class="go-row__lbl">累计</span>
+                  <span class="go-row__req">26,991<small>次</small></span>
+                  <span class="go-row__meta">6.41B tok · $168.99</span>
+                </div>
+              </section>
+
+              <section class="go-lists">
+                <div class="go-list">
+                  <div class="go-list__head">
+                    <span>模型 TOP 3 · 共 12</span>
+                    <span>请求 / 费用标记</span>
+                  </div>
+                  <ol class="go-list__items">
+                    <li class="go-list__item"><span class="go-list__idx">01</span><span class="go-list__nm">deepseek-v4-flash</span><span class="go-list__rq">15,938</span><span class="go-list__co">$33.76</span></li>
+                    <li class="go-list__item"><span class="go-list__idx">02</span><span class="go-list__nm">qwen3-coder</span><span class="go-list__rq">3,120</span><span class="go-list__co">$6.10</span></li>
+                    <li class="go-list__item"><span class="go-list__idx">03</span><span class="go-list__nm">kimi-k2</span><span class="go-list__rq">890</span><span class="go-list__co">$1.90</span></li>
+                  </ol>
+                </div>
+              </section>
+
+              <div class="go-foot">
+                <span>读写占比 96.20%</span>
+                <span>完整明细 → usage go</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <figcaption class="notes">
+        <span class="tag">新增按钮</span><span class="tag v">服务端额度</span>
+        <ul>
+          <li>同一位置新增缩小按钮 <span class="k">[⤡] [↻] [✕]</span>，图标与完整态费用视图一致。</li>
+          <li>Go 视图结构不变：今日请求 hero → 套餐额度（5小时 / 本周 / 本月，violet）→ 命中率双条 → 本周/累计 → 模型 Top3 → footer。</li>
+          <li>额度色阶：<span class="kv">42%</span> / <span class="kv">18%</span> 正常 violet；<span class="k">63%</span> 落入 50–80% warn 琥珀段。</li>
+          <li>缩小后 → 紧凑态 Go（<span class="k">300 × 120</span>），只保留 5小时 / 本周 / 本月三行额度。</li>
+        </ul>
+      </figcaption>
+    </figure>
+
+    <!-- ③ 紧凑态 · 费用 -->
+    <figure class="shot">
+      <div class="shot__head">
+        <span class="shot__title">③ 紧凑态 · 费用</span>
+        <span class="size size--compact">300 × 120</span>
+      </div>
+      <div class="mock">
+        <span class="pin pin--gray pin--btn-c">布局 A · 三行清单</span>
+        <div class="widget widget--compact">
+          <div class="card">
+            <header class="c-head c-head--compact">
+              <div class="brand">
+                <span class="brand__dot"></span>
+                <span class="brand__title">OpenCode</span>
+              </div>
+              <span class="tabs">
+                <button class="tab on" type="button">费用</button>
+                <button class="tab" type="button">Go</button>
+              </span>
+              <div class="actions">
+                <button class="iconbtn iconbtn--stroke" type="button" title="放大">
+                  <svg viewBox="0 0 16 16"><path d="M4 9.5 8 5.5 12 9.5"/></svg>
+                </button>
+                <button class="iconbtn iconbtn--rotate" type="button" title="刷新">
+                  <svg viewBox="0 0 16 16"><path d="M8 2.5a5.5 5.5 0 0 1 4.85 2.92l-1.18.55A4.2 4.2 0 0 0 8 3.8a4.2 4.2 0 1 0 3.99 5.55h1.3A5.5 5.5 0 1 1 8 2.5Zm.65-1.85v3.4H5.25l1.2-1.2A5.48 5.48 0 0 1 8.65.65Z"/></svg>
+                </button>
+                <button class="iconbtn iconbtn--danger" type="button" title="关闭">
+                  <svg viewBox="0 0 16 16"><path d="M3.72 3.72a.75.75 0 0 1 1.06 0L8 6.94l3.22-3.22a.75.75 0 1 1 1.06 1.06L9.06 8l3.22 3.22a.75.75 0 1 1-1.06 1.06L8 9.06l-3.22 3.22a.75.75 0 0 1-1.06-1.06L6.94 8 3.72 4.78a.75.75 0 0 1 0-1.06Z"/></svg>
+                </button>
+              </div>
+            </header>
+            <div class="c-fee-rows">
+              <div class="c-fee-row">
+                <span class="c-fee-row__k">今日</span>
+                <span class="c-fee-row__v">$1.23</span>
+              </div>
+              <div class="c-fee-row">
+                <span class="c-fee-row__k">本周</span>
+                <span class="c-fee-row__v">$8.45</span>
+              </div>
+              <div class="c-fee-row c-fee-row--strong">
+                <span class="c-fee-row__k">累计</span>
+                <span class="c-fee-row__v">$167.54</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <figcaption class="notes">
+        <span class="tag v">布局 A</span>
+        <ul>
+          <li>顶栏去掉「用量」副标题（避免拥挤）；dot + OpenCode + 费用/Go pills + 三按钮。</li>
+          <li>放大按钮 <span class="k">⤢</span>（chevron-up <span class="k">M4 9.5 8 5.5 12 9.5</span>），仍在刷新左侧。</li>
+          <li>正文三行：label 左（11px <span class="k">--fg-3</span>）/ 数值右（mono 14px <span class="k">--fg</span>）；
+              累计数值 <span class="k">--amber</span> 14–15px 强调。行高 flex 均分，无滚动。</li>
+          <li>窗口 <span class="k">300 × 120</span>，固定高度不抖动；点费用/Go 只换内容、尺寸不变。</li>
+        </ul>
+      </figcaption>
+    </figure>
+
+    <!-- ④ 紧凑态 · Go -->
+    <figure class="shot">
+      <div class="shot__head">
+        <span class="shot__title">④ 紧凑态 · Go</span>
+        <span class="size size--compact">300 × 120</span>
+      </div>
+      <div class="mock">
+        <span class="pin pin--gray pin--btn-c">布局 A · 三行额度</span>
+        <div class="widget widget--compact">
+          <div class="card">
+            <header class="c-head c-head--compact">
+              <div class="brand">
+                <span class="brand__dot"></span>
+                <span class="brand__title">OpenCode</span>
+              </div>
+              <span class="tabs">
+                <button class="tab" type="button">费用</button>
+                <button class="tab on" type="button">Go</button>
+              </span>
+              <div class="actions">
+                <button class="iconbtn iconbtn--stroke" type="button" title="放大">
+                  <svg viewBox="0 0 16 16"><path d="M4 9.5 8 5.5 12 9.5"/></svg>
+                </button>
+                <button class="iconbtn iconbtn--rotate" type="button" title="刷新">
+                  <svg viewBox="0 0 16 16"><path d="M8 2.5a5.5 5.5 0 0 1 4.85 2.92l-1.18.55A4.2 4.2 0 0 0 8 3.8a4.2 4.2 0 1 0 3.99 5.55h1.3A5.5 5.5 0 1 1 8 2.5Zm.65-1.85v3.4H5.25l1.2-1.2A5.48 5.48 0 0 1 8.65.65Z"/></svg>
+                </button>
+                <button class="iconbtn iconbtn--danger" type="button" title="关闭">
+                  <svg viewBox="0 0 16 16"><path d="M3.72 3.72a.75.75 0 0 1 1.06 0L8 6.94l3.22-3.22a.75.75 0 1 1 1.06 1.06L9.06 8l3.22 3.22a.75.75 0 1 1-1.06 1.06L8 9.06l-3.22 3.22a.75.75 0 0 1-1.06-1.06L6.94 8 3.72 4.78a.75.75 0 0 1 0-1.06Z"/></svg>
+                </button>
+              </div>
+            </header>
+            <div class="c-go-rows">
+              <div class="c-go-row">
+                <span class="c-go-row__n">5小时</span>
+                <span class="c-go-row__bar"><span class="c-go-row__fill" style="width:42%"></span></span>
+                <span class="c-go-row__v">42%</span>
+                <span class="c-go-row__r">2h11m</span>
+              </div>
+              <div class="c-go-row">
+                <span class="c-go-row__n">本周</span>
+                <span class="c-go-row__bar"><span class="c-go-row__fill" style="width:18%"></span></span>
+                <span class="c-go-row__v">18%</span>
+                <span class="c-go-row__r">09-14</span>
+              </div>
+              <div class="c-go-row">
+                <span class="c-go-row__n">本月</span>
+                <span class="c-go-row__bar"><span class="c-go-row__fill" style="width:63%"></span></span>
+                <span class="c-go-row__v">63%</span>
+                <span class="c-go-row__r">10-01</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <figcaption class="notes">
+        <span class="tag v">布局 A</span>
+        <ul>
+          <li>三行网格 <span class="k">grid-template-columns:34px 1fr 40px 64px; gap:6px</span>
+              ＝ 标签 / 4px 进度条 / 百分比 / 重置。</li>
+          <li>进度条 4px、圆角 999、violet 渐变填充；label 10px <span class="k">--fg-2</span>；
+              百分比 10.5px mono <span class="kv">--violet</span>；重置 9px <span class="k">--fg-4</span>。</li>
+          <li>重置文案用<b>短格式</b>：<span class="k">2h11m</span> / <span class="k">09-14</span> / <span class="k">10-01</span>
+              （完整态是「2h11m 后重置」「09-14 重置」）。</li>
+          <li>窗口 <span class="k">300 × 120</span>；点费用/Go 内容即时切换，窗口尺寸与位置不变。</li>
+        </ul>
+      </figcaption>
+    </figure>
+
+  </div>
+</div>
+</body>
+</html>
