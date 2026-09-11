@@ -1163,3 +1163,216 @@ body {
     animation: none;
   }
 }
+
+/* ============================================================
+ * Compact mode (v0.3) — ADDITIVE ONLY: all new classes are c- prefixed.
+ * Compact window: 300×120 (vs full 300×400). Header loses "用量" sub.
+ * ============================================================ */
+
+/* ---- compact button (stroke-only SVG) ---- */
+.iconbtn--stroke svg {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* ---- compact header ---- */
+.c-head--compact {
+  padding: 7px 8px 7px 12px;
+  gap: 6px;
+}
+
+.c-head--compact .brand__sub {
+  display: none;
+}
+
+/* ---- compact fee: three rows ---- */
+.c-fee-rows {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  padding: 4px 14px 6px;
+  min-height: 0;
+}
+
+.c-fee-row {
+  flex: 1 1 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 0;
+}
+
+.c-fee-row__k {
+  font-size: 11px;
+  color: var(--fg-3);
+  letter-spacing: 0.14em;
+}
+
+.c-fee-row__v {
+  font-family: var(--mono);
+  font-feature-settings: "tnum" 1;
+  font-size: 14px;
+  color: var(--fg);
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+
+.c-fee-row--strong .c-fee-row__v {
+  color: var(--amber);
+  font-size: 15px;
+}
+
+/* ---- compact Go: three rows with grid ---- */
+.c-go-rows {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  padding: 5px 14px 6px;
+  min-height: 0;
+}
+
+.c-go-row {
+  flex: 1 1 0;
+  display: grid;
+  grid-template-columns: 34px 1fr 40px 64px;
+  gap: 6px;
+  align-items: center;
+  min-height: 0;
+}
+
+.c-go-row__n {
+  font-size: 10px;
+  color: var(--fg-2);
+  white-space: nowrap;
+}
+
+.c-go-row__bar {
+  position: relative;
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  overflow: hidden;
+}
+
+.c-go-row__fill {
+  display: block;
+  height: 100%;
+  width: 0;
+  min-width: 2px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--violet), #9f8cfa);
+  transition: width 320ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.c-go-row.warn .c-go-row__fill {
+  background: linear-gradient(90deg, var(--warn), var(--coral));
+}
+
+.c-go-row.hit .c-go-row__fill {
+  background: linear-gradient(90deg, var(--danger), #e04848);
+}
+
+.c-go-row__v {
+  font-family: var(--mono);
+  font-feature-settings: "tnum" 1;
+  font-size: 10.5px;
+  color: var(--violet);
+  text-align: right;
+}
+
+.c-go-row.warn .c-go-row__v {
+  color: var(--warn);
+}
+
+.c-go-row.hit .c-go-row__v {
+  color: var(--danger);
+}
+
+.c-go-row__r {
+  font-family: var(--mono);
+  font-size: 9px;
+  color: var(--fg-4);
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* ---- compact degraded block ---- */
+.c-degrade {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 14px;
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--fg-4);
+  text-align: center;
+  line-height: 1.6;
+}
+
+/* ---- compact state tag (header) ---- */
+.c-tag {
+  font-size: 9px;
+  line-height: 1;
+  padding: 2px 6px;
+  border-radius: 999px;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  flex: 0 0 auto;
+}
+
+.c-tag:empty {
+  display: none;
+}
+
+.c-tag--danger {
+  background: var(--danger-soft);
+  color: var(--danger);
+  border: 1px solid rgba(255, 107, 107, 0.3);
+}
+
+.c-tag--muted {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--fg-3);
+  border: 1px solid var(--border);
+}
+
+/* ---- header dot state variants ---- */
+.brand__dot.is-red {
+  background: var(--danger);
+  box-shadow: 0 0 8px rgba(255, 107, 107, 0.4);
+  animation: none;
+}
+
+.brand__dot.is-gray {
+  background: var(--fg-4);
+  box-shadow: none;
+  animation: none;
+}
+
+/* ---- compact skeleton shimmer ---- */
+.c-skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.08),
+    transparent
+  );
+  animation: go-pulse 1.4s infinite;
+}
+
+/* ---- compact mode layout on .card ---- */
+.card.is-compact .pane {
+  display: none;
+}
+
+.card.is-compact .pane.is-active {
+  display: flex;
+}

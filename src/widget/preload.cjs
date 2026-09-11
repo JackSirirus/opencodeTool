@@ -42,4 +42,7 @@ contextBridge.exposeInMainWorld("widget", {
   },
 
   getGoLocalInitial: () => ipcRenderer.invoke("go:local:initial"),
+
+  // Compact mode toggle (request/response)
+  setCompact: (isCompact) => ipcRenderer.invoke("widget:set-compact", isCompact),
 });

@@ -117,6 +117,11 @@ const els = {
   goModelCount: document.getElementById("go-model-count"),
   goListModels: document.getElementById("go-list-models"),
   goFootHitrate: document.getElementById("go-foot-hitrate"),
+
+  // Compact mode (v0.3) — paneFee/paneGo are already referenced above
+  btnCompact: document.getElementById("btn-compact"),
+  card: document.getElementById("card"),
+  header: document.getElementById("header"),
 };
 
 // Quota windows in display order: key in payload → row element → banner label
@@ -316,6 +321,11 @@ let lastUsage = null;
 let lastQuota = null;
 let lastGoLocal = null;
 let goLocalFetchInFlight = false;
+let isCompact = false;
+
+// v0.3 compact toggle icons: chevron-down = shrink, chevron-up = expand
+const SVG_SHRINK = '<path d="M4 6.5 8 10.5 12 6.5" />';
+const SVG_EXPAND = '<path d="M4 9.5 8 5.5 12 9.5" />';
 
 function rateLimitedBannerLine(rl) {
   return `Go 已达 ${rl.label}上限 · 重置后自动恢复 · 期间可切免费模型（opencode/*）`;
@@ -371,6 +381,11 @@ function renderDot() {
 function renderGoChrome() {
   renderBanner();
   renderDot();
+  // compact Go rows live outside the full quota DOM — keep them fresh on pushes
+  if (isCompact && activePane === "go") {
+    renderCompactGo(lastQuota, currentGoLocal());
+  }
+  renderStateTag();
 }
 
 // ---- Go pane: quota section (server data, violet) ---------------------------
@@ -654,6 +669,258 @@ function renderGoLocal() {
     (rw == null || !Number.isFinite(rw) ? "—" : `${(rw * 100).toFixed(2)}%`);
 }
 
+// ---- compact mode (v0.3) ----------------------------------------------------
+// Compact content lives outside the panes as direct children of .card
+// (design: 三行费用清单 / 三行额度 / 单行降级, all c- prefixed). `.card.is-compact`
+// hides the panes via CSS; this module shows exactly one compact block.
+
+let compactEls = null;
+let compactGoDegraded = false;
+
+function ensureCompactDom() {
+  if (compactEls) return compactEls;
+
+  const feeRows = document.createElement("div");
+  feeRows.className = "c-fee-rows";
+  feeRows.style.display = "none";
+  feeRows.innerHTML = `
+    <div class="c-fee-row"><span class="c-fee-row__k">今日</span><span class="c-fee-row__v">···</span></div>
+    <div class="c-fee-row"><span class="c-fee-row__k">本周</span><span class="c-fee-row__v">···</span></div>
+    <div class="c-fee-row c-fee-row--strong"><span class="c-fee-row__k">累计</span><span class="c-fee-row__v">···</span></div>`;
+
+  const goRows = document.createElement("div");
+  goRows.className = "c-go-rows";
+  goRows.style.display = "none";
+  goRows.innerHTML = `
+    <div class="c-go-row"><span class="c-go-row__n">5小时</span><span class="c-go-row__bar"><span class="c-go-row__fill"></span></span><span class="c-go-row__v">···</span><span class="c-go-row__r">···</span></div>
+    <div class="c-go-row"><span class="c-go-row__n">本周</span><span class="c-go-row__bar"><span class="c-go-row__fill"></span></span><span class="c-go-row__v">···</span><span class="c-go-row__r">···</span></div>
+    <div class="c-go-row"><span class="c-go-row__n">本月</span><span class="c-go-row__bar"><span class="c-go-row__fill"></span></span><span class="c-go-row__v">···</span><span class="c-go-row__r">···</span></div>`;
+
+  const degrade = document.createElement("div");
+  degrade.className = "c-degrade";
+  degrade.style.display = "none";
+
+  // state tag, right of the brand title (design S3/S4/S5/S8)
+  const tag = document.createElement("span");
+  tag.className = "c-tag";
+  const title = els.headerDot.parentElement.querySelector(".brand__title");
+  if (title) title.after(tag);
+  else els.headerDot.parentElement.appendChild(tag);
+
+  els.card.append(feeRows, goRows, degrade);
+  const feeVals = feeRows.querySelectorAll(".c-fee-row__v");
+  compactEls = {
+    feeRows,
+    feeToday: feeVals[0],
+    feeWeek: feeVals[1],
+    feeAll: feeVals[2],
+    goRows,
+    goRowEls: Array.from(goRows.querySelectorAll(".c-go-row")),
+    degrade,
+    tag,
+  };
+  return compactEls;
+}
+
+// Compact fee: 今日 / 本周 / 累计 (US-02; S6 loading, S8 DB down)
+function renderCompactFee(summary) {
+  const c = ensureCompactDom();
+  if (!summary || typeof summary !== "object") {
+    c.feeToday.textContent = c.feeWeek.textContent = c.feeAll.textContent = "···";
+    return;
+  }
+  if (summary.available === false) {
+    c.feeToday.textContent = c.feeWeek.textContent = c.feeAll.textContent = "—";
+    return;
+  }
+  c.feeToday.textContent = fmtCost(summary.today?.cost);
+  c.feeWeek.textContent = fmtCost(summary.week?.cost);
+  c.feeAll.textContent = fmtCost(summary.allTime?.cost);
+}
+
+// rolling → "2h11m"; weekly/monthly → "09-14" (short format, design S2)
+function resetLabelShort(key, resetsAt) {
+  const t = Date.parse(resetsAt);
+  if (!Number.isFinite(t)) return "—";
+  if (key === "rolling") {
+    const delta = t - Date.now();
+    if (delta <= 0) return "等待刷新";
+    if (delta < 60_000) return "即将重置";
+    const totalMin = Math.floor(delta / 60_000);
+    const h = Math.floor(totalMin / 60);
+    const m = totalMin % 60;
+    return h > 0 ? `${h}h${String(m).padStart(2, "0")}m` : `${m}m`;
+  }
+  const d = new Date(t);
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${mm}-${dd}`;
+}
+
+// Compact quota row: same percent ladder as full mode, short reset format
+function renderCompactQuotaRow(rowEl, win, key) {
+  const bar = rowEl.querySelector(".c-go-row__bar");
+  const fill = rowEl.querySelector(".c-go-row__fill");
+  const v = rowEl.querySelector(".c-go-row__v");
+  const r = rowEl.querySelector(".c-go-row__r");
+  bar.classList.remove("c-skeleton");
+  rowEl.classList.remove("hit", "warn");
+  if (!win || typeof win !== "object") {
+    fill.style.width = "0%";
+    v.textContent = "—";
+    r.textContent = "—";
+    return;
+  }
+  const limited = win.status === "rate-limited";
+  let pct = Number(win.percent);
+  pct = Number.isFinite(pct) ? Math.min(100, Math.max(0, pct)) : 0;
+  if (limited) pct = 100; // rate-limited is always full (设计 S3)
+  fill.style.width = `${pct}%`;
+  v.textContent = `${Math.round(pct)}%`;
+  if (limited || pct >= 80) rowEl.classList.add("hit");
+  else if (pct >= 50) rowEl.classList.add("warn");
+  r.textContent = resetLabelShort(key, win.resetsAt);
+}
+
+// Compact Go: three quota rows; loading = skeleton, unavailable = one-line
+// degrade block (S4/S5/S6). `goLocal` is accepted for the dispatcher signature
+// (S7 keeps showing quota rows by default, so it is not consulted).
+function renderCompactGo(quota, goLocal) {
+  const c = ensureCompactDom();
+  const q = quota && typeof quota === "object" ? quota : null;
+
+  if (!q) {
+    // S6 — skeleton rows until the first quota payload lands
+    compactGoDegraded = false;
+    c.goRowEls.forEach((row) => {
+      row.classList.remove("hit", "warn");
+      row.querySelector(".c-go-row__bar").classList.add("c-skeleton");
+      row.querySelector(".c-go-row__fill").style.width = "0%";
+      row.querySelector(".c-go-row__v").textContent = "···";
+      row.querySelector(".c-go-row__r").textContent = "···";
+    });
+    return;
+  }
+
+  if (q.available === false) {
+    // S4/S5 — collapse the three rows into one degraded line
+    compactGoDegraded = true;
+    c.degrade.textContent =
+      q.reason === "no-subscription" || q.reason === "no-credentials"
+        ? "无 opencode-go 凭据"
+        : "额度数据不可用 · 点 ↻ 重试";
+    return;
+  }
+
+  compactGoDegraded = false;
+  QUOTA_WINDOWS.forEach(({ key }, i) => {
+    renderCompactQuotaRow(c.goRowEls[i], q.windows ? q.windows[key] : null, key);
+  });
+}
+
+// Compact header state: dot color + conditional tag (US-05). The standalone
+// banner is suppressed in compact (决策 11) — state lives in the header.
+function renderStateTag() {
+  if (!isCompact) {
+    // leaving compact — restore full-mode chrome owned by renderBanner/renderDot
+    els.headerDot.classList.remove("is-red", "is-gray");
+    if (compactEls) {
+      compactEls.tag.textContent = "";
+      compactEls.tag.className = "c-tag";
+      compactEls.tag.title = "";
+      compactEls.feeRows.style.display = "none";
+      compactEls.goRows.style.display = "none";
+      compactEls.degrade.style.display = "none";
+    }
+    return;
+  }
+
+  const c = ensureCompactDom();
+  els.banner.classList.add("banner--hidden");
+
+  const rl = findRateLimited(lastQuota);
+  const quotaDown = !!(lastQuota && lastQuota.available === false);
+  const dbDown = !!(lastUsage && lastUsage.available === false);
+
+  els.headerDot.classList.toggle("is-red", !!rl);
+  els.headerDot.classList.toggle("is-gray", !rl && (quotaDown || dbDown));
+
+  if (rl) {
+    c.tag.textContent = "限流";
+    c.tag.className = "c-tag c-tag--danger";
+    c.tag.title = rateLimitedBannerLine(rl);
+  } else if (quotaDown) {
+    c.tag.className = "c-tag c-tag--muted";
+    if (
+      lastQuota.reason === "no-subscription" ||
+      lastQuota.reason === "no-credentials"
+    ) {
+      c.tag.textContent = "无订阅";
+      c.tag.title = "auth.json 中无 opencode-go 凭据，或订阅已过期";
+    } else {
+      c.tag.textContent = "额度离线";
+      c.tag.title = "无法连接 opencode.ai · 检查网络后点 ↻ 重试";
+    }
+  } else if (dbDown) {
+    c.tag.textContent = "本地离线";
+    c.tag.className = "c-tag c-tag--muted";
+    c.tag.title = "数据库不可用，等待中…（每 30s 重试）";
+  } else {
+    c.tag.textContent = "";
+    c.tag.className = "c-tag";
+    c.tag.title = "";
+  }
+
+  // exactly one compact block is visible for the active pane
+  const showFee = activePane === "fee";
+  c.feeRows.style.display = showFee ? "" : "none";
+  c.goRows.style.display = !showFee && !compactGoDegraded ? "" : "none";
+  c.degrade.style.display = !showFee && compactGoDegraded ? "" : "none";
+}
+
+// Compact content for the active pane + chrome (pane switch / toggle / updates)
+function renderCompact() {
+  if (activePane === "fee") {
+    renderCompactFee(lastUsage);
+  } else {
+    renderCompactGo(lastQuota, currentGoLocal());
+  }
+  renderStateTag();
+}
+
+// Sync toggle button icon/classes + re-render for the current mode
+function applyCompactMode() {
+  els.btnCompact.querySelector("svg").innerHTML = isCompact
+    ? SVG_EXPAND
+    : SVG_SHRINK;
+  els.btnCompact.title = isCompact ? "放大" : "缩小";
+  els.btnCompact.setAttribute("aria-label", isCompact ? "放大" : "缩小");
+  els.card.classList.toggle("is-compact", isCompact);
+  els.header.classList.toggle("c-head--compact", isCompact);
+  if (isCompact) {
+    renderCompact();
+  } else {
+    renderFull();
+  }
+}
+
+function toggleCompact() {
+  isCompact = !isCompact;
+  applyCompactMode();
+  api.setCompact(isCompact).catch((err) => {
+    console.error("setCompact failed:", err);
+    // revert UI too — the window size never changed, state must stay aligned
+    isCompact = !isCompact;
+    applyCompactMode();
+  });
+}
+
+// Full-mode re-render from the cached payload (used when leaving compact);
+// in full mode render() takes its unchanged path.
+function renderFull() {
+  render(lastUsage);
+}
+
 // ---- tab state machine (fee | go) -------------------------------------------
 
 function switchPane(name) {
@@ -665,6 +932,12 @@ function switchPane(name) {
   els.tabGo.classList.toggle("on", name === "go");
   els.tabFee.setAttribute("aria-pressed", String(name === "fee"));
   els.tabGo.setAttribute("aria-pressed", String(name === "go"));
+  // Compact mode has its own content tree — re-render the visible pane and
+  // stop before the full-pane refresh path below.
+  if (isCompact) {
+    renderCompact();
+    return;
+  }
   // Re-render go sections on show so countdowns are fresh; data comes from
   // memory, no re-fetch (<50ms, 设计 S9) — except the very first Go open,
   // which lazily pulls the local usage (S1 skeleton shows until it lands).
@@ -696,6 +969,12 @@ function switchPane(name) {
 function render(summary) {
   const safe = summary && typeof summary === "object" ? summary : {};
   lastUsage = safe;
+
+  if (isCompact) {
+    // compact view replaces the full tree; chrome handled by renderStateTag
+    renderCompact();
+    return;
+  }
 
   // fee pane — existing render path, zero behavior change
   els.heroUpdated.textContent = fmtTime(safe.generatedAt);
@@ -735,6 +1014,10 @@ if (!api) {
 
   els.btnClose.addEventListener("click", () => {
     api.close();
+  });
+
+  els.btnCompact.addEventListener("click", () => {
+    toggleCompact();
   });
 
   // tab pills (fee | go) — data-pane attribute is the single source of truth

@@ -30,6 +30,8 @@ const QUOTA_POLL_INTERVAL_MS = 5 * 60_000;
 const SELFTEST_TIMEOUT_MS = 30_000;
 const WIN_WIDTH = 300;
 const WIN_HEIGHT = 400;
+const COMPACT_WIDTH = 300;
+const COMPACT_HEIGHT = 120;
 const EDGE_MARGIN = 16;
 
 const __filename = fileURLToPath(import.meta.url);
@@ -176,6 +178,24 @@ function computeAnchorRect(display) {
   const x = Math.max(area.x, area.x + area.width - WIN_WIDTH - EDGE_MARGIN);
   const y = Math.max(area.y, area.y + area.height - WIN_HEIGHT - EDGE_MARGIN);
   return { x, y };
+}
+
+function computeCompactAnchorRect(display, newWidth, newHeight) {
+  // Keep the current bottom-right corner fixed: compact mode shrinks the
+  // window up/left from where the user sees it instead of jumping anchors.
+  const current = mainWindow.getBounds();
+  const right = current.x + current.width;
+  const bottom = current.y + current.height;
+  const area = display.workArea || display.bounds;
+  const x = Math.max(
+    area.x,
+    Math.min(right - newWidth, area.x + area.width - newWidth),
+  );
+  const y = Math.max(
+    area.y,
+    Math.min(bottom - newHeight, area.y + area.height - newHeight),
+  );
+  return { x, y, width: newWidth, height: newHeight };
 }
 
 function createWindow() {
@@ -362,6 +382,19 @@ ipcMain.handle("go:local:initial", async () => {
 
 ipcMain.on("widget:close", () => {
   if (mainWindow && !mainWindow.isDestroyed()) mainWindow.close();
+});
+
+// Compact mode toggle: renderer calls with a boolean; the window resizes
+// 300×400 ↔ 300×120 while keeping its bottom-right corner anchored.
+// resizable:false does not block programmatic setBounds.
+ipcMain.handle("widget:set-compact", (_event, isCompact) => {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  const display = screen.getPrimaryDisplay();
+  const w = isCompact ? COMPACT_WIDTH : WIN_WIDTH;
+  const h = isCompact ? COMPACT_HEIGHT : WIN_HEIGHT;
+  const rect = computeCompactAnchorRect(display, w, h);
+  mainWindow.setBounds(rect);
+  return { width: w, height: h };
 });
 
 // Renderer announces it has rendered the first payload — only used in selftest
